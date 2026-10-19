@@ -10,6 +10,12 @@ export const es = {
   anadirJugador: '+ Añadir jugador',
   quitarJugador: 'Quitar',
   empezar: 'Empezar',
+  vaso: 'Vaso',
+  liquido: 'Líquido',
+  vasos: { cilindro: 'Recto', copa: 'Copa', botella: 'Botella', aleatorio: '🎲' },
+  liquidos: { agua: 'Agua', aceite: 'Aceite', cerveza: 'Cerveza', aleatorio: '🎲' },
+  cambiarCadaRonda: 'Sortear de nuevo en cada ronda (lo que esté en 🎲)',
+  combinacion: (liquido: string, vaso: string) => `${liquido} · ${vaso}`,
 
   turnoDe: (nombre: string) => `Turno de ${nombre}`,
   pasaElMovil: 'Pásale el móvil',

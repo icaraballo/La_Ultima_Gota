@@ -54,6 +54,15 @@ h2 { font-size: 18px; }
 .boton.secundario { background: var(--fondo-2); color: var(--texto); }
 .boton:disabled { opacity: .35; }
 #empezar { margin-top: auto; }
+.opciones { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.opcion {
+  font: inherit; font-size: 15px; padding: 12px 4px; border-radius: 12px;
+  border: 2px solid transparent; background: var(--fondo-2); color: var(--texto);
+}
+.opcion.elegida { border-color: var(--acento); background: rgba(95, 180, 232, .18); }
+.check { display: flex; gap: 10px; align-items: center; color: var(--suave); font-size: 14px; }
+.check input { width: 20px; height: 20px; }
+.combinacion { color: var(--suave); font-size: 18px; }
 
 /* ── Juego ── */
 .juego { padding-left: 0; padding-right: 0; gap: 0; user-select: none; -webkit-user-select: none; }

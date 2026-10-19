@@ -8,6 +8,8 @@ import type { Rng } from './rng';
 export interface Parcel {
   kind: 'drop' | 'stream';
   volume: number;
+  /** Espuma que hará al llegar (solo líquidos con espuma). */
+  foam: number;
   /** Cuándo salió del grifo y cuándo llega al vaso (s, reloj del grifo). */
   emitted: number;
   arrival: number;
@@ -32,6 +34,8 @@ export class Faucet {
   flow = 0;
   /** Lo que ha salido y aún no ha llegado al vaso. */
   readonly inAir: Parcel[] = [];
+  /** Espuma que llegó en el último paso. */
+  arrivedFoam = 0;
   private open = false;
   private openedAt = 0;
   private pendingDrops: { at: number; volume: number }[] = [];
@@ -90,17 +94,24 @@ export class Faucet {
       if (this.flow < cfg.flowCutoff) this.flow = 0;
     }
     if (this.flow > 0) {
-      this.inAir.push({ kind: 'stream', volume: this.flow * dt, emitted: this.time, arrival: this.time + cfg.fallTime });
+      // Cuanto más fuerte el chorro, más espuma por volumen.
+      const volume = this.flow * dt;
+      const foam = volume * liquid.foamPerFlow * (this.flow / cfg.flowMax);
+      this.inAir.push({ kind: 'stream', volume, foam, emitted: this.time, arrival: this.time + cfg.fallTime });
     }
 
     while (this.pendingDrops.length && this.pendingDrops[0].at <= this.time) {
       const d = this.pendingDrops.shift()!;
-      this.inAir.push({ kind: 'drop', volume: d.volume, emitted: this.time, arrival: this.time + cfg.fallTime });
+      const foam = d.volume * liquid.foamPerFlow * 0.05;
+      this.inAir.push({ kind: 'drop', volume: d.volume, foam, emitted: this.time, arrival: this.time + cfg.fallTime });
     }
 
     let arrived = 0;
+    this.arrivedFoam = 0;
     while (this.inAir.length && this.inAir[0].arrival <= this.time) {
-      arrived += this.inAir.shift()!.volume;
+      const p = this.inAir.shift()!;
+      arrived += p.volume;
+      this.arrivedFoam += p.foam;
     }
     return arrived;
   }

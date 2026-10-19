@@ -1,6 +1,10 @@
 import { config } from '../core/config';
 import type { Game } from '../core/game';
-import type { Barra2D } from '../render/barra-2d';
+
+/** Lo que el panel necesita de la vista (2D o 3D). */
+interface Vista {
+  showLimit: boolean;
+}
 
 // Modo depuración (§9.2): lecturas en directo y sliders sobre config.ts para ajustar el tacto
 // sin recompilar. Panel lateral plegable, nunca a pantalla completa. Los valores se guardan en
@@ -16,7 +20,11 @@ interface Param {
   set(v: number): void;
 }
 
-const agua = config.liquids.agua;
+const liq = (id: keyof typeof config.liquids, key: keyof typeof config.liquids.agua, label: string, min: number, max: number, step: number): Param => ({
+  label: `${label} · ${id}`, min, max, step,
+  get: () => config.liquids[id][key],
+  set: v => { config.liquids[id][key] = v; },
+});
 const top = <K extends keyof typeof config>(key: K, label: string, min: number, max: number, step: number): Param => ({
   label, min, max, step,
   get: () => config[key] as number,
@@ -43,10 +51,18 @@ const PARAMS: { grupo: string; params: Param[] }[] = [
     top('flowNoiseRate', 'Ritmo fluctuación (/s)', 0.2, 6, 0.1),
     top('fallTime', 'Caída grifo→vaso (s)', 0.05, 1, 0.01),
   ] },
-  { grupo: 'Agua', params: [
-    { label: 'Inercia al soltar (s)', min: 0, max: 0.8, step: 0.01, get: () => agua.inertia, set: v => { agua.inertia = v; } },
-    { label: 'Menisco (vol)', min: 0, max: 0.08, step: 0.001, get: () => agua.meniscus, set: v => { agua.meniscus = v; } },
-  ] },
+  ...(['agua', 'aceite', 'cerveza'] as const).map(id => ({
+    grupo: id[0].toUpperCase() + id.slice(1),
+    params: [
+      liq(id, 'flowMul', 'Caudal ×', 0.2, 2, 0.05),
+      liq(id, 'inertia', 'Inercia (s)', 0, 0.8, 0.01),
+      liq(id, 'meniscus', 'Menisco (alto)', 0, 0.08, 0.001),
+      ...(id === 'cerveza' ? [
+        liq(id, 'foamPerFlow', 'Espuma por chorro', 0, 3, 0.05),
+        liq(id, 'foamDecay', 'Asentado (1/s)', 0.05, 3, 0.05),
+      ] : []),
+    ],
+  })),
   { grupo: 'Ronda', params: [
     top('meniscusVariance', 'Variación oculta (±)', 0, 0.5, 0.01),
     top('turnEndDelay', 'Pausa al acabar turno (s)', 0, 2, 0.05),
@@ -69,7 +85,7 @@ const fmt = (v: number, step: number) => {
 };
 const pct = (v: number) => `${(v * 100).toFixed(1)} %`;
 
-export function createDebug(root: HTMLElement, barra: Barra2D) {
+export function createDebug(root: HTMLElement, barra: Vista) {
   const defaults = ALL.map(p => p.get());
   // Valores guardados de otra sesión.
   try {
@@ -143,7 +159,7 @@ export function createDebug(root: HTMLElement, barra: Barra2D) {
     const valores = {
       ...Object.fromEntries((Object.keys(config) as (keyof typeof config)[])
         .filter(k => typeof config[k] === 'number' || Array.isArray(config[k])).map(k => [k, config[k]])),
-      agua: { ...agua },
+      liquids: config.liquids,
     };
     const txt = JSON.stringify(valores, null, 1);
     try {
@@ -174,8 +190,9 @@ export function createDebug(root: HTMLElement, barra: Barra2D) {
       const ultimo = game.history[game.history.length - 1];
       $('dbg-mini').textContent = `${pct(glass.volume)} / ${pct(glass.limit)}`;
       $('dbg-lecturas').textContent = [
-        `ronda ${game.round} · fase ${game.phase}`,
+        `ronda ${game.round} · ${game.liquidId} en ${game.vesselId} · ${game.phase}`,
         `volumen   ${pct(glass.volume)}`,
+        `espuma    ${pct(glass.foam)}`,
         `altura    ${pct(glass.height)}`,
         `límite    ${pct(glass.limit)} (margen ${pct(glass.margin)})`,
         `peligro   ${pct(glass.danger)}`,

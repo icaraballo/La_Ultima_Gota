@@ -1,9 +1,9 @@
 // Cada vaso es un perfil de radio según la altura, r(h), con h de 0 (fondo) a 1 (borde).
 // El nivel se calcula integrando el área, así que el mismo volumen sube distinto en cada
 // forma. El perfil servirá también para la geometría 3D (LatheGeometry, fase 3).
-// Fase 1: solo el cilindro. Copa y botella llegan en la fase 5.
 
-export type VesselId = 'cilindro';
+export type VesselId = 'cilindro' | 'copa' | 'botella';
+export const VESSEL_IDS: VesselId[] = ['cilindro', 'copa', 'botella'];
 
 export interface Vessel {
   id: string;
@@ -53,8 +53,18 @@ export function makeVessel(id: string, radius: (h: number) => number): Vessel {
   };
 }
 
+const smooth = (a: number, b: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
 const vessels: Record<VesselId, Vessel> = {
+  // No engaña: sube siempre al mismo ritmo.
   cilindro: makeVessel('cilindro', () => 1),
+  // Cono invertido: sube rápido al principio y al final parece que no sube.
+  copa: makeVessel('copa', h => 0.3 + 0.7 * h),
+  // Cuerpo ancho y cuello estrecho: el último cuarto de altura es ~4 % del volumen.
+  botella: makeVessel('botella', h => 1 - 0.68 * smooth(0.55, 0.75, h)),
 };
 
 export function getVessel(id: VesselId): Vessel {

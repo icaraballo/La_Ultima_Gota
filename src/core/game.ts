@@ -1,9 +1,9 @@
 import { config as defaultConfig, type Config } from './config';
 import { Glass } from './glass-state';
-import { getLiquid, type LiquidId } from './liquids';
+import { getLiquid, LIQUID_IDS, type LiquidId } from './liquids';
 import { Faucet } from './pour';
 import { createRng, type Rng } from './rng';
-import { getVessel, type VesselId } from './vessels';
+import { getVessel, VESSEL_IDS, type VesselId } from './vessels';
 
 // La partida: jugadores, turnos, rondas y eliminación. Recibe pulsaciones (press/release) y
 // avanza con step(dt) a paso fijo; quien dibuja solo lee su estado.
@@ -40,8 +40,11 @@ export interface TurnRecord {
 
 export interface GameOptions {
   seed: number;
-  vessel?: VesselId;
-  liquid?: LiquidId;
+  /** Vaso y líquido, o 'aleatorio'. Por defecto, cilindro y agua. */
+  vessel?: VesselId | 'aleatorio';
+  liquid?: LiquidId | 'aleatorio';
+  /** Volver a sortear lo aleatorio en cada ronda. */
+  changeEachRound?: boolean;
 }
 
 export class Game {
@@ -54,6 +57,9 @@ export class Game {
   turn = 0;
   glass!: Glass;
   faucet!: Faucet;
+  /** Lo que se juega en esta ronda (ya resuelto si era aleatorio). */
+  vesselId!: VesselId;
+  liquidId!: LiquidId;
   time = 0;
   /** El eliminado de la última ronda y el ganador al acabar. */
   loser: number | null = null;
@@ -154,7 +160,8 @@ export class Game {
 
     const arrived = this.faucet.step(dt);
     const wasOverflowed = this.glass.overflowed;
-    this.glass.add(arrived);
+    this.glass.step(dt);
+    this.glass.add(arrived, this.faucet.arrivedFoam);
     if (this.phase === 'echando') this.pouredThisTurn += arrived;
 
     if (!wasOverflowed && this.glass.overflowed && this.phase === 'echando') {
@@ -183,8 +190,13 @@ export class Game {
     this.turn = 0;
     this.loser = null;
     this.pressedAt = null;
-    const liquid = getLiquid(this.options.liquid ?? 'agua');
-    this.glass = new Glass(getVessel(this.options.vessel ?? 'cilindro'), liquid, this.rng, this.cfg);
+    const { vessel = 'cilindro', liquid: liquidOpt = 'agua', changeEachRound = false } = this.options;
+    if (this.round === 1 || changeEachRound) {
+      this.vesselId = vessel === 'aleatorio' ? VESSEL_IDS[Math.floor(this.rng.next() * VESSEL_IDS.length)] : vessel;
+      this.liquidId = liquidOpt === 'aleatorio' ? LIQUID_IDS[Math.floor(this.rng.next() * LIQUID_IDS.length)] : liquidOpt;
+    }
+    const liquid = getLiquid(this.liquidId);
+    this.glass = new Glass(getVessel(this.vesselId), liquid, this.rng, this.cfg);
     this.faucet = new Faucet(liquid, this.rng, this.cfg);
     this.phase = 'turno';
   }

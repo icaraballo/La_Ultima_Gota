@@ -45,9 +45,16 @@ export const config = {
   minPlayers: 2,
   maxPlayers: 8,
 
+  /**
+   * flowMul: multiplica el caudal. inertia (s): al soltar sigue cayendo caudal × inercia.
+   * meniscus: cuánto se abomba sobre el borde, en ALTURA relativa (1 = alto del vaso): en el
+   * cuello de la botella ese margen es muy poco volumen. foamPerFlow: espuma por volumen echado
+   * a caudal máximo (las gotas, un 5 %). foamDecay (1/s): lo rápido que se asienta.
+   */
   liquids: {
-    /** inercia (s): al soltar sigue cayendo caudal × inercia. menisco: margen sobre el borde. */
-    agua: { flowMul: 1, inertia: 0.15, meniscus: 0.025 },
+    agua: { flowMul: 1, inertia: 0.15, meniscus: 0.025, foamPerFlow: 0, foamDecay: 0.5 },
+    aceite: { flowMul: 0.8, inertia: 0.35, meniscus: 0.008, foamPerFlow: 0, foamDecay: 0.5 },
+    cerveza: { flowMul: 1, inertia: 0.15, meniscus: 0.02, foamPerFlow: 0.9, foamDecay: 0.5 },
   },
 };
 

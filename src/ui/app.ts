@@ -1,19 +1,42 @@
 import { config } from '../core/config';
-import { Game, type Phase } from '../core/game';
+import { Game, type GameOptions, type Phase } from '../core/game';
+import { LIQUID_IDS, type LiquidId } from '../core/liquids';
+import { VESSEL_IDS, type VesselId } from '../core/vessels';
 import { t } from '../i18n';
 import { Barra2D } from '../render/barra-2d';
+import { Escena3D } from '../render/escena-3d';
 import { createDebug } from './debug';
 
-// Pantallas mínimas de la fase 1: jugadores, «Turno de X», el vaso, eliminado y ganador.
-// El flujo completo (opciones, resumen, cómo jugar, ajustes) es la fase 4.
+// Pantallas: jugadores (con vaso y líquido), «Turno de X», el vaso, eliminado y ganador.
+// El resto del flujo (resumen, cómo jugar, ajustes) es la fase 4.
 
 const DT = 1 / config.stepsPerSecond;
 
 const esc = (s: string) =>
   s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
+const K_PARTIDA = 'ultima-gota:partida';
+interface Preparacion {
+  names: string[];
+  vessel: VesselId | 'aleatorio';
+  liquid: LiquidId | 'aleatorio';
+  changeEachRound: boolean;
+}
+function loadPrep(): Preparacion {
+  const base: Preparacion = { names: ['', ''], vessel: 'cilindro', liquid: 'agua', changeEachRound: false };
+  try {
+    const saved = JSON.parse(localStorage.getItem(K_PARTIDA) ?? 'null');
+    if (saved && Array.isArray(saved.names)) return { ...base, ...saved };
+  } catch { /* sin almacenamiento */ }
+  return base;
+}
+function savePrep(p: Preparacion) {
+  try { localStorage.setItem(K_PARTIDA, JSON.stringify(p)); } catch { /* sin almacenamiento */ }
+}
+
 export function startApp(root: HTMLElement) {
-  let names: string[] = ['', ''];
+  const prep = loadPrep();
+  let names = prep.names;
   let game: Game | null = null;
   let shownPhase: Phase | null = null;
 
@@ -35,8 +58,10 @@ export function startApp(root: HTMLElement) {
   const $ = (id: string) => document.getElementById(id)!;
   const pJugadores = $('p-jugadores'), pJuego = $('p-juego'), capa = $('j-capa');
   const zona = $('j-zona');
-  const barra = new Barra2D($('j-vaso') as HTMLCanvasElement);
-  const debug = createDebug(root, barra);
+  // 3D por defecto; ?2d vuelve al vaso plano de la fase 1 (útil para afinar el tacto).
+  const canvas = $('j-vaso') as HTMLCanvasElement;
+  const vista = new URLSearchParams(location.search).has('2d') ? new Barra2D(canvas) : new Escena3D(canvas);
+  const debug = createDebug(root, vista);
 
   // ── Jugadores ──────────────────────────────────────────────
   function showPlayers() {
@@ -55,17 +80,31 @@ export function startApp(root: HTMLElement) {
           </li>`).join('')}
       </ol>
       ${names.length < config.maxPlayers ? `<button class="boton secundario" id="anadir">${t.anadirJugador}</button>` : ''}
+      <h2>${t.vaso}</h2>
+      <div class="opciones" data-opcion="vessel">
+        ${[...VESSEL_IDS, 'aleatorio' as const].map(id => `<button class="opcion${prep.vessel === id ? ' elegida' : ''}" data-valor="${id}">${t.vasos[id]}</button>`).join('')}
+      </div>
+      <h2>${t.liquido}</h2>
+      <div class="opciones" data-opcion="liquid">
+        ${[...LIQUID_IDS, 'aleatorio' as const].map(id => `<button class="opcion${prep.liquid === id ? ' elegida' : ''}" data-valor="${id}">${t.liquidos[id]}</button>`).join('')}
+      </div>
+      <label class="check"><input type="checkbox" id="cada-ronda" ${prep.changeEachRound ? 'checked' : ''}> ${t.cambiarCadaRonda}</label>
       <button class="boton" id="empezar">${t.empezar}</button>
     `;
   }
   pJugadores.addEventListener('input', e => {
     const el = e.target as HTMLInputElement;
     if (el.dataset.i) names[+el.dataset.i] = el.value;
+    if (el.id === 'cada-ronda') prep.changeEachRound = el.checked;
   });
   pJugadores.addEventListener('click', e => {
     const el = (e.target as HTMLElement).closest('button');
     if (!el) return;
-    if (el.dataset.quitar) {
+    const grupo = (el.parentElement as HTMLElement).dataset.opcion as 'vessel' | 'liquid' | undefined;
+    if (grupo && el.dataset.valor) {
+      (prep[grupo] as string) = el.dataset.valor;
+      el.parentElement!.querySelectorAll('.opcion').forEach(b => b.classList.toggle('elegida', b === el));
+    } else if (el.dataset.quitar) {
       names.splice(+el.dataset.quitar, 1);
       showPlayers();
     } else if (el.id === 'anadir') {
@@ -79,7 +118,15 @@ export function startApp(root: HTMLElement) {
 
   function start() {
     const finalNames = names.map((n, i) => n.trim() || t.jugadorN(i + 1));
-    game = new Game(finalNames, { seed: (Math.random() * 2 ** 32) >>> 0 });
+    prep.names = names;
+    savePrep(prep);
+    const options: GameOptions = {
+      seed: (Math.random() * 2 ** 32) >>> 0,
+      vessel: prep.vessel,
+      liquid: prep.liquid,
+      changeEachRound: prep.changeEachRound,
+    };
+    game = new Game(finalNames, options);
     shownPhase = null;
     pJugadores.hidden = true;
     pJuego.hidden = false;
@@ -129,6 +176,7 @@ export function startApp(root: HTMLElement) {
       capa.innerHTML = `
         <p class="pequeno">${t.pasaElMovil}</p>
         <h1 class="grande">${t.turnoDe(nombre(g.current))}</h1>
+        <p class="combinacion">${t.combinacion(t.liquidos[g.liquidId], t.vasos[g.vesselId])}</p>
         <button class="boton" id="listo">${t.listo}</button>`;
     } else if (g.phase === 'desborde') {
       const quedan = g.alive.length;
@@ -163,7 +211,7 @@ export function startApp(root: HTMLElement) {
       }
       zona.classList.toggle('usada', game.poured);
       zona.textContent = game.poured ? t.cayendo : t.zonaEchar;
-      barra.draw(game, nowMs / 1000);
+      vista.draw(game, nowMs / 1000);
       debug.update(game);
     } else {
       acc = 0;

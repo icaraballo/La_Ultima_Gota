@@ -1,7 +1,7 @@
 import { config } from './config';
 
-// Fase 1: solo agua. Aceite y cerveza (con espuma) llegan en la fase 5.
 export type LiquidId = keyof typeof config.liquids;
+export const LIQUID_IDS = Object.keys(config.liquids) as LiquidId[];
 
 export interface Liquid {
   id: LiquidId;
@@ -9,8 +9,12 @@ export interface Liquid {
   flowMul: number;
   /** Segundos de caudal que siguen cayendo al soltar. */
   inertia: number;
-  /** Cuánto aguanta por encima del borde, en volumen relativo, antes de la variación oculta. */
+  /** Cuánto se abomba sobre el borde (altura relativa), antes de la variación oculta. */
   meniscus: number;
+  /** Espuma por volumen echado a caudal máximo (0 = no hace espuma). */
+  foamPerFlow: number;
+  /** Ritmo al que se asienta la espuma (1/s). */
+  foamDecay: number;
 }
 
 /** Vista viva de los parámetros: si el modo depuración cambia config, se nota al momento
@@ -22,5 +26,7 @@ export function getLiquid(id: LiquidId): Liquid {
     get flowMul() { return p.flowMul; },
     get inertia() { return p.inertia; },
     get meniscus() { return p.meniscus; },
+    get foamPerFlow() { return p.foamPerFlow; },
+    get foamDecay() { return p.foamDecay; },
   };
 }

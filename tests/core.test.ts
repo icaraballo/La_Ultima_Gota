@@ -244,3 +244,80 @@ describe('partida', () => {
     expect(jugar(11)).toEqual(a);
   });
 });
+
+describe('contenido: vasos, líquidos y espuma', () => {
+  it('copa: sube rápido al principio y despacio al final', () => {
+    const copa = getVessel('copa');
+    expect(copa.volumeToHeight(0.1)).toBeGreaterThan(0.2);
+    expect(copa.volumeToHeight(1) - copa.volumeToHeight(0.9)).toBeLessThan(0.06);
+  });
+
+  it('botella: el cuello es poco volumen y sube muchísimo', () => {
+    const b = getVessel('botella');
+    expect(1 - b.heightToVolume(0.75)).toBeLessThan(0.06);
+    expect(b.volumeToHeight(0.5)).toBeLessThan(0.45);
+  });
+
+  it('el menisco es altura: en la botella aguanta mucho menos volumen que en la copa', () => {
+    const g = (v: 'botella' | 'copa') => new Glass(getVessel(v), agua, createRng(1), config);
+    expect(g('botella').limit - 1).toBeLessThan(g('copa').limit - 1);
+  });
+
+  it('cerveza: el chorro fuerte hace espuma, se asienta y también desborda', () => {
+    const cerveza = getLiquid('cerveza');
+    const f = new Faucet(cerveza, createRng(1), config);
+    const g = new Glass(getVessel('cilindro'), cerveza, createRng(1), config);
+    f.startStream();
+    for (let i = 0; i < 120; i++) { g.step(DT); g.add(f.step(DT), f.arrivedFoam); }
+    expect(g.foam).toBeGreaterThan(0.02);
+    f.stopStream();
+    const antes = g.foam;
+    for (let i = 0; i < 240; i++) { g.step(DT); g.add(f.step(DT), f.arrivedFoam); }
+    expect(g.foam).toBeLessThan(antes * 0.5);
+    g.add(g.limit - g.total - 0.001, 0);
+    expect(g.overflowed).toBe(false);
+    g.add(0, 0.01);
+    expect(g.overflowed).toBe(true);
+  });
+
+  it('el agua no hace espuma', () => {
+    const f = new Faucet(agua, createRng(1), config);
+    f.startStream();
+    let espuma = 0;
+    for (let i = 0; i < 120; i++) { f.step(DT); espuma += f.arrivedFoam; }
+    expect(espuma).toBe(0);
+  });
+
+  it('aleatorio: se sortea al empezar y, si se pide, en cada ronda', () => {
+    const vistos = new Set<string>();
+    for (let seed = 0; seed < 30; seed++) {
+      const g = new Game(['A', 'B'], { seed, vessel: 'aleatorio', liquid: 'aleatorio' });
+      vistos.add(`${g.vesselId}-${g.liquidId}`);
+    }
+    expect(vistos.size).toBeGreaterThan(5);
+    const g = new Game(['A', 'B', 'C', 'D'], { seed: 3, vessel: 'aleatorio', liquid: 'aleatorio', changeEachRound: true });
+    const rondas = new Set<string>();
+    for (let i = 0; i < 3; i++) {
+      rondas.add(`${g.vesselId}-${g.liquidId}`);
+      g.ready();
+      pour(g, 30);
+      g.continue();
+    }
+    expect(rondas.size).toBeGreaterThan(1);
+  });
+
+  it('las 9 combinaciones se juegan hasta un ganador', () => {
+    for (const vessel of ['cilindro', 'copa', 'botella'] as const) {
+      for (const liquid of ['agua', 'aceite', 'cerveza'] as const) {
+        const g = new Game(['A', 'B', 'C'], { seed: 5, vessel, liquid });
+        const r = createRng(9);
+        for (let paso = 0; paso < 3000 && g.phase !== 'fin'; paso++) {
+          if (g.phase === 'turno') g.ready();
+          else if (g.phase === 'desborde') g.continue();
+          else pour(g, r.next() < 0.4 ? 0 : r.next() * 2);
+        }
+        expect(g.winner, `${liquid} en ${vessel}`).not.toBeNull();
+      }
+    }
+  });
+});

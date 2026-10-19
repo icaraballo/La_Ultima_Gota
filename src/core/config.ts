@@ -43,7 +43,7 @@ export const config = {
   nearBrimHapticStart: 0.85,
 
   minPlayers: 2,
-  maxPlayers: 8,
+  maxPlayers: 10,
 
   /**
    * flowMul: multiplica el caudal. inertia (s): al soltar sigue cayendo caudal × inercia.

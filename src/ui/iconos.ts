@@ -11,6 +11,7 @@ export const iconos = {
   gota: svg(30, 38, '<path d="M15 2 C21 12 28 19 28 26 C28 32 22 36 15 36 C8 36 2 32 2 26 C2 19 9 12 15 2 Z" fill="currentColor"/>'),
   luna: svg(24, 24, '<path d="M20 14.5 A8.5 8.5 0 1 1 9.5 4 A7 7 0 0 0 20 14.5 Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>'),
   sol: svg(24, 24, '<circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>'),
+  info: svg(24, 24, '<circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 11v6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="7.4" r="1.5" fill="currentColor"/>'),
   dado: svg(24, 24, '<rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="9" cy="9" r="1.6" fill="currentColor"/><circle cx="15" cy="15" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/>'),
   vasos: {
     cilindro: svg(24, 24, '<path d="M6 4 L7 20 H17 L18 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>'),

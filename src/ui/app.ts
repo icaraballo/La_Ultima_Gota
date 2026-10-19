@@ -9,7 +9,8 @@ import { aplicarTemas, guardarTema, LIQUIDOS, temaGuardado, type TemaId } from '
 import { createDebug } from './debug';
 import { iconos } from './iconos';
 
-// Pantallas: jugadores (con vaso y líquido), «Turno de X», el vaso, eliminado y ganador.
+// Pantallas: jugadores (con vaso y líquido, y la hoja ⓘ), «Turno de X», el vaso, eliminado y
+// ganador.
 // El resto del flujo (resumen, cómo jugar, ajustes) es la fase 4.
 
 const DT = 1 / config.stepsPerSecond;
@@ -22,13 +23,17 @@ interface Preparacion {
   names: string[];
   vessel: VesselId | 'aleatorio';
   liquid: LiquidId | 'aleatorio';
-  changeEachRound: boolean;
+  /** «Empezar en orden aleatorio»: se baraja una vez al crear la partida. */
+  randomOrder: boolean;
 }
 function loadPrep(): Preparacion {
-  const base: Preparacion = { names: ['', ''], vessel: 'cilindro', liquid: 'agua', changeEachRound: false };
+  const base: Preparacion = { names: ['', ''], vessel: 'cilindro', liquid: 'agua', randomOrder: false };
   try {
     const saved = JSON.parse(localStorage.getItem(K_PARTIDA) ?? 'null');
-    if (saved && Array.isArray(saved.names)) return { ...base, ...saved };
+    if (saved && Array.isArray(saved.names)) {
+      const { names, vessel, liquid, randomOrder } = { ...base, ...saved } as Preparacion;
+      return { names: names.slice(0, config.maxPlayers), vessel, liquid, randomOrder };
+    }
   } catch { /* sin almacenamiento */ }
   return base;
 }
@@ -60,6 +65,7 @@ export function startApp(root: HTMLElement) {
       </footer>
       <div class="capa" id="j-capa" hidden></div>
     </section>
+    <div class="hoja-fondo" id="hoja" hidden></div>
     <div class="version">${t.version(__VERSION__)}</div>
   `;
   const $ = (id: string) => document.getElementById(id)!;
@@ -96,8 +102,13 @@ export function startApp(root: HTMLElement) {
     game = null;
     pJuego.hidden = true;
     pJugadores.hidden = false;
+    const scroll = pJugadores.querySelector('.desplazable')?.scrollTop ?? 0;
     pJugadores.innerHTML = `
-      <div class="esquinas">${botonTema()}</div>
+      <div class="desplazable">
+      <div class="esquinas">
+        <button class="redondo" id="abrir-info" aria-label="${t.info}">${iconos.info}</button>
+        ${botonTema()}
+      </div>
       <div class="titulo">
         ${iconos.gotaTitulo}
         <h1 class="logo" id="logo">${t.titulo}</h1>
@@ -123,14 +134,16 @@ export function startApp(root: HTMLElement) {
           ? `<button class="opcion${prep.liquid === id ? ' elegida' : ''}" data-valor="${id}" aria-label="${t.liquidoAzar}">${iconos.dado}</button>`
           : `<button class="opcion${prep.liquid === id ? ' elegida' : ''}" data-valor="${id}"><span class="punto con-borde" style="background:${LIQUIDOS[id].cuerpo}"></span>${t.liquidos[id]}</button>`).join('')}
       </div>
-      <label class="check"><input type="checkbox" id="cada-ronda" ${prep.changeEachRound ? 'checked' : ''}> ${t.cambiarCadaRonda}</label>
-      <button class="boton principal" id="empezar">${t.empezar}</button>
+      <label class="check"><input type="checkbox" id="orden-aleatorio" ${prep.randomOrder ? 'checked' : ''}> ${t.empezarAleatorio}</label>
+      </div>
+      <div class="pie"><button class="boton principal" id="empezar">${t.empezar}</button></div>
     `;
+    pJugadores.querySelector('.desplazable')!.scrollTop = scroll;
   }
   pJugadores.addEventListener('input', e => {
     const el = e.target as HTMLInputElement;
     if (el.dataset.i) names[+el.dataset.i] = el.value;
-    if (el.id === 'cada-ronda') prep.changeEachRound = el.checked;
+    if (el.id === 'orden-aleatorio') prep.randomOrder = el.checked;
   });
   pJugadores.addEventListener('click', e => {
     const el = (e.target as HTMLElement).closest('button');
@@ -150,8 +163,49 @@ export function startApp(root: HTMLElement) {
       start();
     } else if (el.id === 'tema') {
       cambiarTema();
+    } else if (el.id === 'abrir-info') {
+      abrirInfo();
     }
   });
+
+  // ── Hoja ⓘ: qué tiene cada vaso y cada líquido (solo fuera de la partida) ──
+  const hoja = $('hoja');
+  function abrirInfo() {
+    const tarjeta = (elegida: boolean, cabeza: string, info: { texto: string; nota: string }) => `
+      <li class="tarjeta-info${elegida ? ' elegida' : ''}">
+        <h4>${cabeza}</h4>
+        <p>${info.texto}${info.nota ? ` <em>${info.nota}</em>` : ''}</p>
+      </li>`;
+    hoja.innerHTML = `
+      <section class="hoja" role="dialog" aria-modal="true" aria-labelledby="hoja-titulo">
+        <header class="hoja-cab">
+          <h2 id="hoja-titulo">${t.info}</h2>
+          <button class="redondo" id="cerrar-info" aria-label="${t.cerrar}">×</button>
+        </header>
+        <div class="hoja-cuerpo">
+          <h3>${t.vasosTitulo}</h3>
+          <ul>${VESSEL_IDS.map(id => tarjeta(prep.vessel === id, `${iconos.vasos[id]}${t.vasos[id]}`, t.infoVasos[id])).join('')}</ul>
+          <h3>${t.liquidosTitulo}</h3>
+          <ul>${LIQUID_IDS.map(id => tarjeta(prep.liquid === id, `<span class="punto con-borde" style="background:${LIQUIDOS[id].cuerpo}"></span>${t.liquidos[id]}`, t.infoLiquidos[id])).join('')}</ul>
+          <p class="hoja-pie">${t.infoPie}</p>
+        </div>
+      </section>`;
+    hoja.hidden = false;
+    // «Atrás» del móvil también la cierra.
+    try { history.pushState({ hoja: true }, ''); } catch { /* sin historial */ }
+    ($('cerrar-info') as HTMLButtonElement).focus();
+  }
+  function cerrarInfo() {
+    if (hoja.hidden) return;
+    if (history.state?.hoja) history.back();
+    else hoja.hidden = true;
+  }
+  window.addEventListener('popstate', () => { hoja.hidden = true; });
+  hoja.addEventListener('click', e => {
+    const el = e.target as HTMLElement;
+    if (el === hoja || el.closest('#cerrar-info')) cerrarInfo();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarInfo(); });
 
   function start() {
     const finalNames = names.map((n, i) => n.trim() || t.jugadorN(i + 1));
@@ -161,7 +215,7 @@ export function startApp(root: HTMLElement) {
       seed: (Math.random() * 2 ** 32) >>> 0,
       vessel: prep.vessel,
       liquid: prep.liquid,
-      changeEachRound: prep.changeEachRound,
+      randomOrder: prep.randomOrder,
     };
     game = new Game(finalNames, options);
     shownPhase = null;
@@ -206,6 +260,7 @@ export function startApp(root: HTMLElement) {
       setZona(false);
     }
     else if (el.id === 'seguir') game.continue();
+    else if (el.id === 'seguir-azar') game.continue(true);
     else if (el.id === 'revancha') start();
     else if (el.id === 'jugadores') showPlayers();
   });
@@ -230,6 +285,7 @@ export function startApp(root: HTMLElement) {
           <h2>${t.eliminado(nombre(g.loser!))}</h2>
           ${quedan > 1 ? `<p>${t.quedan(quedan)}</p>` : ''}
           <button class="boton principal" id="seguir">${quedan > 1 ? t.siguienteRonda : t.verGanador}</button>
+          ${quedan > 1 ? `<button class="boton con-icono" id="seguir-azar">${iconos.dado}${t.combinacionAleatoria}</button>` : ''}
         </div>`;
     } else if (g.phase === 'fin') {
       capa.innerHTML = `

@@ -9,6 +9,8 @@ import { getVessel, VESSEL_IDS, type VesselId } from './vessels';
 // avanza con step(dt) a paso fijo; quien dibuja solo lee su estado.
 // Una sola pulsación por turno (decisión del 19-10-2026): al soltar, el turno acaba en cuanto
 // termina de caer lo echado. Si eso desborda, pierde quien echó.
+// Orden fijo (19-10-2026): el de la lista o sorteado una vez; tras un desborde empieza el
+// siguiente al eliminado. Vaso y líquido se mantienen salvo que se pida otra combinación.
 
 /**
  * - `turno`: pantalla «Turno de X», esperando a «¡Listo!» (para pasar el móvil).
@@ -40,18 +42,23 @@ export interface TurnRecord {
 
 export interface GameOptions {
   seed: number;
-  /** Vaso y líquido, o 'aleatorio'. Por defecto, cilindro y agua. */
+  /** Vaso y líquido, o 'aleatorio' (se sortea una vez, al crear la partida). Por defecto,
+   * cilindro y agua. */
   vessel?: VesselId | 'aleatorio';
   liquid?: LiquidId | 'aleatorio';
-  /** Volver a sortear lo aleatorio en cada ronda. */
-  changeEachRound?: boolean;
+  /** Barajar el orden de la lista una sola vez, al crear la partida. */
+  randomOrder?: boolean;
 }
+
+const combo = (v: VesselId, l: LiquidId) => `${v}:${l}`;
 
 export class Game {
   readonly players: Player[];
   phase: Phase = 'turno';
   round = 0;
-  /** Orden de esta ronda: índices de jugadores vivos, sorteados. */
+  /** Orden de toda la partida: la lista, o barajada una vez si se pidió. */
+  readonly baseOrder: number[];
+  /** Orden de esta ronda: los vivos de `baseOrder`, empezando por quien abre la ronda. */
   order: number[] = [];
   /** Posición en `order` de quien juega. */
   turn = 0;
@@ -65,6 +72,8 @@ export class Game {
   loser: number | null = null;
   winner: number | null = null;
   readonly history: TurnRecord[] = [];
+  /** Combinaciones de vaso y líquido ya jugadas en esta partida («copa:agua»). */
+  readonly played = new Set<string>();
 
   private rng: Rng;
   private pressedAt: number | null = null;
@@ -77,13 +86,18 @@ export class Game {
   /** Lo que duró la última pulsación (s), para el modo depuración. */
   lastHeld = 0;
 
-  constructor(names: string[], private options: GameOptions, private cfg: Config = defaultConfig) {
+  constructor(names: string[], options: GameOptions, private cfg: Config = defaultConfig) {
     if (names.length < cfg.minPlayers || names.length > cfg.maxPlayers) {
       throw new Error(`De ${cfg.minPlayers} a ${cfg.maxPlayers} jugadores`);
     }
     this.players = names.map(name => ({ name, alive: true }));
     this.rng = createRng(options.seed);
-    this.startRound();
+    const list = names.map((_, i) => i);
+    this.baseOrder = options.randomOrder ? this.rng.shuffle(list) : list;
+    const { vessel = 'cilindro', liquid = 'agua' } = options;
+    this.vesselId = vessel === 'aleatorio' ? VESSEL_IDS[Math.floor(this.rng.next() * VESSEL_IDS.length)] : vessel;
+    this.liquidId = liquid === 'aleatorio' ? LIQUID_IDS[Math.floor(this.rng.next() * LIQUID_IDS.length)] : liquid;
+    this.startRound(null);
   }
 
   get current(): number {
@@ -137,16 +151,24 @@ export class Game {
     this.pressedAt = null;
   }
 
-  /** «Siguiente ronda» tras un desborde: nueva ronda, o fin si solo queda uno. */
-  continue() {
+  /** «Siguiente ronda» tras un desborde: nueva ronda, o fin si solo queda uno. Con
+   * `newCombination`, la ronda se juega con un vaso y un líquido sorteados entre los que aún no
+   * se han jugado (si ya han salido las 9, entre todos menos el de la ronda que acaba). */
+  continue(newCombination = false) {
     if (this.phase !== 'desborde') return;
     const alive = this.alive;
     if (alive.length === 1) {
       this.winner = alive[0];
       this.phase = 'fin';
-    } else {
-      this.startRound();
+      return;
     }
+    if (newCombination) {
+      const all = VESSEL_IDS.flatMap(v => LIQUID_IDS.map(l => [v, l] as const));
+      let choices = all.filter(([v, l]) => !this.played.has(combo(v, l)));
+      if (!choices.length) choices = all.filter(([v, l]) => combo(v, l) !== combo(this.vesselId, this.liquidId));
+      [this.vesselId, this.liquidId] = choices[Math.floor(this.rng.next() * choices.length)];
+    }
+    this.startRound(this.loser);
   }
 
   step(dt: number) {
@@ -184,17 +206,24 @@ export class Game {
     }
   }
 
-  private startRound() {
+  /** Ronda nueva con los vivos en el orden de la partida. Tras un desborde, empieza el primer
+   * vivo detrás del eliminado (en círculo). */
+  private startRound(after: number | null) {
     this.round++;
-    this.order = this.rng.shuffle(this.alive);
+    const base = this.baseOrder;
+    let start = 0;
+    if (after !== null) {
+      const p = base.indexOf(after);
+      for (let k = 1; k <= base.length; k++) {
+        const i = (p + k) % base.length;
+        if (this.players[base[i]].alive) { start = i; break; }
+      }
+    }
+    this.order = [...base.slice(start), ...base.slice(0, start)].filter(i => this.players[i].alive);
     this.turn = 0;
     this.loser = null;
     this.pressedAt = null;
-    const { vessel = 'cilindro', liquid: liquidOpt = 'agua', changeEachRound = false } = this.options;
-    if (this.round === 1 || changeEachRound) {
-      this.vesselId = vessel === 'aleatorio' ? VESSEL_IDS[Math.floor(this.rng.next() * VESSEL_IDS.length)] : vessel;
-      this.liquidId = liquidOpt === 'aleatorio' ? LIQUID_IDS[Math.floor(this.rng.next() * LIQUID_IDS.length)] : liquidOpt;
-    }
+    this.played.add(combo(this.vesselId, this.liquidId));
     const liquid = getLiquid(this.liquidId);
     this.glass = new Glass(getVessel(this.vesselId), liquid, this.rng, this.cfg);
     this.faucet = new Faucet(liquid, this.rng, this.cfg);

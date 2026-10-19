@@ -24,10 +24,18 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   display: flex; flex-direction: column; gap: 10px;
 }
 
-/* ── Jugadores ── */
+/* ── Jugadores: todo hace scroll menos «Empezar» ── */
+#p-jugadores { padding: 0; gap: 0; overflow: hidden; }
+.desplazable {
+  flex: 1; min-height: 0; overflow-y: auto; position: relative;
+  padding: max(20px, env(safe-area-inset-top)) 16px 8px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.pie { flex: none; padding: 8px 16px max(18px, env(safe-area-inset-bottom)); }
+.pie .boton { width: 100%; }
 .esquinas {
   position: absolute; left: 12px; right: 12px; top: max(12px, env(safe-area-inset-top));
-  display: flex; justify-content: flex-end; pointer-events: none;
+  display: flex; justify-content: space-between; pointer-events: none;
 }
 .esquinas > * { pointer-events: auto; }
 .redondo {
@@ -82,7 +90,7 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
   box-shadow: 0 5px 0 var(--tinta); margin-bottom: 5px;
 }
 .boton.principal:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--tinta); }
-#empezar { margin-top: auto; flex: none; }
+.boton.con-icono { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; }
 .combinacion { color: var(--suave); font-size: 18px; }
 
 /* ── Juego ── */
@@ -128,6 +136,39 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
   box-shadow: 0 6px 0 var(--tinta);
 }
 .tarjeta h2 { font-size: 22px; color: var(--peligro); margin: 0; }
+
+/* ── Hoja ⓘ ── */
+.hoja-fondo {
+  position: fixed; inset: 0; z-index: 5; background: rgba(0, 0, 0, .45);
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.hoja {
+  width: 100%; max-width: 560px; max-height: 88%;
+  display: flex; flex-direction: column;
+  background: var(--fondo); border: 3px solid var(--tinta); border-bottom: 0;
+  border-radius: 26px 26px 0 0; animation: subir .22s ease-out;
+}
+@keyframes subir { from { transform: translateY(40%); opacity: .4; } }
+.hoja-cab {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 14px 6px 20px;
+}
+.hoja-cab h2 { margin: 0; font-size: 22px; }
+.hoja-cab .redondo { font-size: 26px; line-height: 1; }
+.hoja-cuerpo {
+  overflow-y: auto; padding: 4px 16px max(20px, env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 8px;
+}
+.hoja-cuerpo h3 { font-size: 15px; font-weight: 600; color: var(--suave); margin-top: 6px; text-transform: uppercase; letter-spacing: .05em; }
+.hoja-cuerpo ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.tarjeta-info {
+  background: var(--panel); border: 2px solid var(--panel-borde); border-radius: 16px; padding: 12px 14px;
+}
+.tarjeta-info.elegida { border: 3px solid var(--acento); box-shadow: 0 3px 0 var(--tinta); }
+.tarjeta-info h4 { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+.tarjeta-info p { font-size: 15px; line-height: 1.4; }
+.tarjeta-info em { color: var(--suave); }
+.hoja-pie { color: var(--suave); font-style: italic; text-align: center; padding: 6px 8px 0; }
 
 .version {
   position: fixed; right: 10px; bottom: max(4px, env(safe-area-inset-bottom));

@@ -216,16 +216,74 @@ describe('partida', () => {
     expect(g.loser).toBe(quien);
   });
 
-  it('tras eliminar, ronda nueva con los que quedan, vaso vacío y orden sorteado', () => {
+  it('tras eliminar, ronda nueva con los que quedan y el vaso vacío', () => {
     const g = new Game(['A', 'B', 'C', 'D'], { seed: 9 });
     g.ready();
     pour(g, 20);
+    const eliminado = g.loser!;
     g.continue();
     expect(g.round).toBe(2);
     expect(g.phase).toBe('turno');
     expect(g.order).toHaveLength(3);
-    expect(g.order).not.toContain(g.loser ?? -1);
+    expect(g.order).not.toContain(eliminado);
     expect(g.glass.volume).toBe(0);
+  });
+
+  /** Turnos de solo una gota hasta que le toque a `quien`, que desborda. */
+  function eliminar(g: Game, quien: number) {
+    while (g.current !== quien) { g.ready(); pour(g, 0.05); }
+    g.ready();
+    pour(g, 20);
+    expect(g.loser).toBe(quien);
+  }
+
+  it('sin orden aleatorio, se juega en el orden de la lista', () => {
+    const g = new Game(['A', 'B', 'C', 'D'], { seed: 3 });
+    expect(g.order).toEqual([0, 1, 2, 3]);
+    const turnos: number[] = [];
+    for (let i = 0; i < 6; i++) { turnos.push(g.current); g.ready(); pour(g, 0.05); }
+    expect(turnos).toEqual([0, 1, 2, 3, 0, 1]);
+  });
+
+  it('con orden aleatorio, se baraja una vez y vale para todas las rondas', () => {
+    const ordenes = new Set<string>();
+    for (let seed = 0; seed < 20; seed++) {
+      const g = new Game(['A', 'B', 'C', 'D', 'E'], { seed, randomOrder: true });
+      expect([...g.baseOrder].sort()).toEqual([0, 1, 2, 3, 4]);
+      expect(g.order).toEqual(g.baseOrder);
+      ordenes.add(g.baseOrder.join());
+      eliminar(g, g.baseOrder[2]);
+      g.continue();
+      // Ronda 2: el mismo orden sin el eliminado, empezando por el siguiente a él.
+      expect(g.order).toEqual([...g.baseOrder.slice(3), ...g.baseOrder.slice(0, 2)]);
+    }
+    expect(ordenes.size).toBeGreaterThan(10);
+  });
+
+  it('tras eliminar a B en A-B-C-D, la ronda 2 empieza por C y sigue C-D-A', () => {
+    const g = new Game(['A', 'B', 'C', 'D'], { seed: 7 });
+    eliminar(g, 1);
+    g.continue();
+    expect(g.order).toEqual([2, 3, 0]);
+    expect(g.current).toBe(2);
+  });
+
+  it('si el eliminado es el último de la lista, empieza el primero vivo', () => {
+    const g = new Game(['A', 'B', 'C', 'D'], { seed: 7 });
+    eliminar(g, 3);
+    g.continue();
+    expect(g.order).toEqual([0, 1, 2]);
+    // Y si luego cae el primero (A), empieza B.
+    eliminar(g, 0);
+    g.continue();
+    expect(g.order).toEqual([1, 2]);
+  });
+
+  it('de 2 a 10 jugadores', () => {
+    const nombres = (n: number) => Array.from({ length: n }, (_, i) => `J${i + 1}`);
+    expect(() => new Game(nombres(10), { seed: 1 })).not.toThrow();
+    expect(() => new Game(nombres(11), { seed: 1 })).toThrow();
+    expect(() => new Game(nombres(1), { seed: 1 })).toThrow();
   });
 
   it('una partida entera con bots acaba con un ganador, y se repite con la misma semilla', () => {
@@ -288,22 +346,47 @@ describe('contenido: vasos, líquidos y espuma', () => {
     expect(espuma).toBe(0);
   });
 
-  it('aleatorio: se sortea al empezar y, si se pide, en cada ronda', () => {
+  it('aleatorio: se sortea al empezar y no cambia entre rondas si no se pide', () => {
     const vistos = new Set<string>();
     for (let seed = 0; seed < 30; seed++) {
       const g = new Game(['A', 'B'], { seed, vessel: 'aleatorio', liquid: 'aleatorio' });
       vistos.add(`${g.vesselId}-${g.liquidId}`);
     }
     expect(vistos.size).toBeGreaterThan(5);
-    const g = new Game(['A', 'B', 'C', 'D'], { seed: 3, vessel: 'aleatorio', liquid: 'aleatorio', changeEachRound: true });
-    const rondas = new Set<string>();
+    const g = new Game(['A', 'B', 'C', 'D'], { seed: 3, vessel: 'aleatorio', liquid: 'aleatorio' });
+    const primera = `${g.vesselId}-${g.liquidId}`;
     for (let i = 0; i < 3; i++) {
-      rondas.add(`${g.vesselId}-${g.liquidId}`);
       g.ready();
       pour(g, 30);
       g.continue();
+      expect(`${g.vesselId}-${g.liquidId}`).toBe(primera);
     }
-    expect(rondas.size).toBeGreaterThan(1);
+  });
+
+  it('continue() mantiene vaso y líquido; continue(true) da una combinación no jugada', () => {
+    const otra = new Game(['A', 'B', 'C'], { seed: 21, vessel: 'copa', liquid: 'cerveza' });
+    otra.ready();
+    pour(otra, 30);
+    otra.continue();
+    expect([otra.vesselId, otra.liquidId]).toEqual(['copa', 'cerveza']);
+    // Hacen falta 10 rondas: 11 jugadores (por encima del máximo del juego, solo para el test).
+    const nombres = Array.from({ length: 11 }, (_, i) => `J${i + 1}`);
+    const g = new Game(nombres, { seed: 21, vessel: 'copa', liquid: 'cerveza' }, { ...config, maxPlayers: 11 });
+    // Ocho rondas pidiendo combinación nueva: salen las 9 sin repetir ninguna.
+    const vistas = [`${g.vesselId}:${g.liquidId}`];
+    for (let i = 0; i < 8; i++) {
+      g.ready();
+      pour(g, 30);
+      g.continue(true);
+      vistas.push(`${g.vesselId}:${g.liquidId}`);
+    }
+    expect(new Set(vistas).size).toBe(9);
+    // La décima solo evita la de la ronda que acaba de terminar.
+    const anterior = vistas[8];
+    g.ready();
+    pour(g, 30);
+    g.continue(true);
+    expect(`${g.vesselId}:${g.liquidId}`).not.toBe(anterior);
   });
 
   it('las 9 combinaciones se juegan hasta un ganador', () => {

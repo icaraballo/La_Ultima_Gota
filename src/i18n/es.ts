@@ -4,6 +4,9 @@ export const es = {
   titulo: 'La Última Gota',
   lema: 'Entre todos llenáis un vaso. Quien lo desborda, pierde.',
   version: (v: string) => `v${v}`,
+  /** El botón dice el modo al que pasas. */
+  modoNoche: 'Modo noche',
+  modoDia: 'Modo día',
 
   jugadores: 'Jugadores',
   jugadorN: (n: number) => `Jugador ${n}`,
@@ -12,9 +15,11 @@ export const es = {
   empezar: 'Empezar',
   vaso: 'Vaso',
   liquido: 'Líquido',
-  vasos: { cilindro: 'Recto', copa: 'Copa', botella: 'Botella', aleatorio: '🎲' },
-  liquidos: { agua: 'Agua', aceite: 'Aceite', cerveza: 'Cerveza', aleatorio: '🎲' },
-  cambiarCadaRonda: 'Sortear de nuevo en cada ronda (lo que esté en 🎲)',
+  vasos: { cilindro: 'Recto', copa: 'Copa', botella: 'Botella', aleatorio: 'Azar' },
+  liquidos: { agua: 'Agua', aceite: 'Aceite', cerveza: 'Cerveza', aleatorio: 'Azar' },
+  vasoAzar: 'Vaso al azar',
+  liquidoAzar: 'Líquido al azar',
+  cambiarCadaRonda: 'Sortear de nuevo en cada ronda (lo que esté en Azar)',
   combinacion: (liquido: string, vaso: string) => `${liquido} · ${vaso}`,
 
   turnoDe: (nombre: string) => `Turno de ${nombre}`,

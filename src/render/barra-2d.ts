@@ -1,11 +1,11 @@
 import type { Game } from '../core/game';
+import { TEMAS, type TemaId } from './temas';
 
 // Vista provisional de la fase 1: el vaso de perfil en 2D. La sustituye la escena 3D en la
 // fase 3. Sin números: solo se ve el nivel, lo que cae y el menisco abombado.
 
 const AGUA = '#5fb4e8';
 const AGUA_OSCURA = '#3f8fc4';
-const CRISTAL = 'rgba(244, 239, 230, .7)';
 /** El menisco real es de pocos píxeles: se exagera para que se vea abombarse. */
 const MENISCO_VISIBLE = 3;
 
@@ -14,8 +14,13 @@ export class Barra2D {
   showLimit = false;
   private overflowSince: number | null = null;
   private lastGlass: unknown = null;
+  private cristal = TEMAS.noche.ui.texto;
 
   constructor(private canvas: HTMLCanvasElement) {}
+
+  setTema(id: TemaId) {
+    this.cristal = TEMAS[id].ui.texto;
+  }
 
   draw(game: Game, now: number) {
     const { canvas } = this;
@@ -108,7 +113,7 @@ export class Barra2D {
     }
 
     // Paredes del vaso.
-    ctx.strokeStyle = CRISTAL;
+    ctx.strokeStyle = this.cristal;
     ctx.lineWidth = 3;
     ctx.lineJoin = 'round';
     ctx.beginPath();

@@ -9,8 +9,9 @@ Cada uno echa una vez por turno —una gota con un toque, un chorro manteniendo 
 soltar le toca al siguiente. Nunca se controla del todo cuánto cae, no hay números en pantalla y el vaso
 aguanta un poco por encima del borde… pero nadie sabe cuánto.
 
-> **En desarrollo.** Ya en 3D, con 3 vasos (recto, copa y botella) y 3 líquidos (agua, aceite
-> y cerveza con espuma), o 🎲. El tacto se afina con el modo depuración
+> **En desarrollo.** Ya en 3D, en cartoon suave con modo noche (bar) y modo día (cocina), con
+> 3 vasos (recto, copa y botella) y 3 líquidos (agua, aceite y cerveza con espuma), o al azar.
+> El tacto se afina con el modo depuración
 > ([`?debug`](https://icaraballo.github.io/La_Ultima_Gota/?debug)); `?2d` vuelve al vaso plano.
 
 ## Desarrollo
@@ -29,7 +30,7 @@ Cada push a `main` se publica solo en GitHub Pages (`.github/workflows/pages.yml
 ```
 src/
 ├─ core/      lógica pura: física del líquido, vasos, turnos. Sin DOM ni Three.js
-├─ render/    la escena 3D (Three.js) y el vaso 2D provisional (?2d)
+├─ render/    la escena 3D (Three.js), los temas noche/día y el vaso 2D provisional (?2d)
 ├─ ui/        pantallas y botones, en HTML/CSS por encima del canvas
 ├─ audio/     Web Audio
 ├─ haptics/   vibración

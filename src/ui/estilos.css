@@ -73,6 +73,7 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
   display: flex; align-items: center; justify-content: center; gap: 6px;
 }
 .vasos .opcion { min-height: 64px; flex-direction: column; gap: 2px; }
+.opciones.tres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .opcion.elegida {
   background: var(--acento); color: var(--acento-texto); border-color: var(--tinta);
   font-weight: 600; box-shadow: 0 3px 0 var(--tinta);

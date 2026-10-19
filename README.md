@@ -10,7 +10,8 @@ soltar le toca al siguiente. Nunca se controla del todo cuánto cae, no hay núm
 aguanta un poco por encima del borde… pero nadie sabe cuánto.
 
 > **En desarrollo.** Ya en 3D, en cartoon suave con modo noche (bar) y modo día (cocina), con
-> 3 vasos (recto, copa y botella) y 3 líquidos (agua, aceite y cerveza con espuma), o al azar.
+> 3 vasos (recto, copa y botella), 3 líquidos (agua, aceite y cerveza con espuma) y el modo de
+> **canicas y monedas** con física real (Matter.js): pierde quien hace caer una fuera del vaso.
 > El tacto se afina con el modo depuración
 > ([`?debug`](https://icaraballo.github.io/La_Ultima_Gota/?debug)); `?2d` vuelve al vaso plano.
 

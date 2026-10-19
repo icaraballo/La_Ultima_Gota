@@ -1,8 +1,10 @@
 import { config as defaultConfig, type Config } from './config';
+import { CONTENT_IDS, isSolid, type ContentId } from './contents';
 import { Glass } from './glass-state';
-import { getLiquid, LIQUID_IDS, type LiquidId } from './liquids';
+import { getLiquid } from './liquids';
 import { Faucet } from './pour';
 import { createRng, type Rng } from './rng';
+import { Pile } from './solids';
 import { getVessel, VESSEL_IDS, type VesselId } from './vessels';
 
 // La partida: jugadores, turnos, rondas y eliminación. Recibe pulsaciones (press/release) y
@@ -11,6 +13,8 @@ import { getVessel, VESSEL_IDS, type VesselId } from './vessels';
 // termina de caer lo echado. Si eso desborda, pierde quien echó.
 // Orden fijo (19-10-2026): el de la lista o sorteado una vez; tras un desborde empieza el
 // siguiente al eliminado. Vaso y líquido se mantienen salvo que se pida otra combinación.
+// Con canicas o monedas el vaso se queda vacío de líquido y manda `pile`: tocar echa una pieza,
+// mantener echa un puñado, y desborda quien hace que una acabe fuera.
 
 /**
  * - `turno`: pantalla «Turno de X», esperando a «¡Listo!» (para pasar el móvil).
@@ -29,7 +33,7 @@ export interface Player {
 export interface TurnRecord {
   round: number;
   player: number;
-  /** Volumen que llegó al vaso en el turno. */
+  /** Volumen que llegó al vaso en el turno (con sólidos, cuántas piezas echó). */
   poured: number;
   /** Cómo quedó el vaso al pasar (o al desbordar). */
   volumeAfter: number;
@@ -45,12 +49,12 @@ export interface GameOptions {
   /** Vaso y líquido, o 'aleatorio' (se sortea una vez, al crear la partida). Por defecto,
    * cilindro y agua. */
   vessel?: VesselId | 'aleatorio';
-  liquid?: LiquidId | 'aleatorio';
+  content?: ContentId | 'aleatorio';
   /** Barajar el orden de la lista una sola vez, al crear la partida. */
   randomOrder?: boolean;
 }
 
-const combo = (v: VesselId, l: LiquidId) => `${v}:${l}`;
+const combo = (v: VesselId, c: ContentId) => `${v}:${c}`;
 
 export class Game {
   readonly players: Player[];
@@ -64,9 +68,11 @@ export class Game {
   turn = 0;
   glass!: Glass;
   faucet!: Faucet;
+  /** Las piezas, si se juega con canicas o monedas (si no, null). */
+  pile: Pile | null = null;
   /** Lo que se juega en esta ronda (ya resuelto si era aleatorio). */
   vesselId!: VesselId;
-  liquidId!: LiquidId;
+  contentId!: ContentId;
   time = 0;
   /** El eliminado de la última ronda y el ganador al acabar. */
   loser: number | null = null;
@@ -83,6 +89,7 @@ export class Game {
   private quietSince: number | null = null;
   private pouredThisTurn = 0;
   private turnStartedAt = 0;
+  private lastDropAt = 0;
   /** Lo que duró la última pulsación (s), para el modo depuración. */
   lastHeld = 0;
 
@@ -94,9 +101,9 @@ export class Game {
     this.rng = createRng(options.seed);
     const list = names.map((_, i) => i);
     this.baseOrder = options.randomOrder ? this.rng.shuffle(list) : list;
-    const { vessel = 'cilindro', liquid = 'agua' } = options;
+    const { vessel = 'cilindro', content = 'agua' } = options;
     this.vesselId = vessel === 'aleatorio' ? VESSEL_IDS[Math.floor(this.rng.next() * VESSEL_IDS.length)] : vessel;
-    this.liquidId = liquid === 'aleatorio' ? LIQUID_IDS[Math.floor(this.rng.next() * LIQUID_IDS.length)] : liquid;
+    this.contentId = content === 'aleatorio' ? CONTENT_IDS[Math.floor(this.rng.next() * CONTENT_IDS.length)] : content;
     this.startRound(null);
   }
 
@@ -110,6 +117,11 @@ export class Game {
 
   get alive(): number[] {
     return this.players.flatMap((p, i) => (p.alive ? [i] : []));
+  }
+
+  /** Ha desbordado: el líquido pasa del límite o una pieza ha acabado fuera del vaso. */
+  get overflowed(): boolean {
+    return this.pile ? this.pile.out !== null : this.glass.overflowed;
   }
 
   /** Ya ha echado en este turno: no admite otra pulsación, solo espera a que caiga. */
@@ -138,12 +150,18 @@ export class Game {
     if (this.phase !== 'echando' || this.pressedAt !== null || this.poured) return;
     this.pressedAt = this.time;
     this.pressStartedAt = this.time;
+    if (this.pile) {
+      this.pile.drop();
+      this.pouredThisTurn++;
+      this.lastDropAt = this.time;
+    }
   }
 
   release() {
     if (this.pressedAt === null) return;
     if (this.phase === 'echando') {
-      if (this.faucet.streaming) this.faucet.stopStream();
+      if (this.pile) { /* las piezas ya han salido al pulsar y al mantener */ }
+      else if (this.faucet.streaming) this.faucet.stopStream();
       else this.faucet.tap();
       this.releasedAt = this.time;
       this.lastHeld = this.time - this.pressedAt;
@@ -152,8 +170,8 @@ export class Game {
   }
 
   /** «Siguiente ronda» tras un desborde: nueva ronda, o fin si solo queda uno. Con
-   * `newCombination`, la ronda se juega con un vaso y un líquido sorteados entre los que aún no
-   * se han jugado (si ya han salido las 9, entre todos menos el de la ronda que acaba). */
+   * `newCombination`, la ronda se juega con un vaso y un contenido sorteados entre los que aún no
+   * se han jugado (si ya han salido todos, entre todos menos el de la ronda que acaba). */
   continue(newCombination = false) {
     if (this.phase !== 'desborde') return;
     const alive = this.alive;
@@ -163,10 +181,10 @@ export class Game {
       return;
     }
     if (newCombination) {
-      const all = VESSEL_IDS.flatMap(v => LIQUID_IDS.map(l => [v, l] as const));
-      let choices = all.filter(([v, l]) => !this.played.has(combo(v, l)));
-      if (!choices.length) choices = all.filter(([v, l]) => combo(v, l) !== combo(this.vesselId, this.liquidId));
-      [this.vesselId, this.liquidId] = choices[Math.floor(this.rng.next() * choices.length)];
+      const all = VESSEL_IDS.flatMap(v => CONTENT_IDS.map(c => [v, c] as const));
+      let choices = all.filter(([v, c]) => !this.played.has(combo(v, c)));
+      if (!choices.length) choices = all.filter(([v, c]) => combo(v, c) !== combo(this.vesselId, this.contentId));
+      [this.vesselId, this.contentId] = choices[Math.floor(this.rng.next() * choices.length)];
     }
     this.startRound(this.loser);
   }
@@ -175,18 +193,29 @@ export class Game {
     this.time += dt;
     const { cfg } = this;
 
-    if (this.phase === 'echando' && this.pressedAt !== null && !this.poured && !this.faucet.streaming
-        && (this.time - this.pressedAt) * 1000 >= cfg.tapThresholdMs) {
-      this.faucet.startStream();
+    const holding = this.phase === 'echando' && this.pressedAt !== null && !this.poured
+      && (this.time - this.pressedAt) * 1000 >= cfg.tapThresholdMs;
+    const { pile } = this;
+    if (holding && !pile && !this.faucet.streaming) this.faucet.startStream();
+    // Mantener con piezas: un puñado, una cada `interval`.
+    if (holding && pile && this.time - this.lastDropAt >= cfg.solids.interval) {
+      pile.drop();
+      this.pouredThisTurn++;
+      this.lastDropAt = this.time;
     }
 
-    const arrived = this.faucet.step(dt);
-    const wasOverflowed = this.glass.overflowed;
-    this.glass.step(dt);
-    this.glass.add(arrived, this.faucet.arrivedFoam);
-    if (this.phase === 'echando') this.pouredThisTurn += arrived;
+    const wasOverflowed = this.overflowed;
+    if (pile) {
+      // Entre turnos el montón se queda quieto: solo se mueve mientras alguien echa (y al caer).
+      if (this.phase === 'echando' || this.phase === 'desborde') pile.step(dt);
+    } else {
+      const arrived = this.faucet.step(dt);
+      this.glass.step(dt);
+      this.glass.add(arrived, this.faucet.arrivedFoam);
+      if (this.phase === 'echando') this.pouredThisTurn += arrived;
+    }
 
-    if (!wasOverflowed && this.glass.overflowed && this.phase === 'echando') {
+    if (!wasOverflowed && this.overflowed && this.phase === 'echando') {
       this.faucet.stopStream();
       this.pressedAt = null;
       this.record(true);
@@ -196,7 +225,10 @@ export class Game {
     }
 
     // Ya ha echado y no cae nada: tras una pausa corta para ver cómo queda, siguiente turno.
-    if (this.phase === 'echando' && this.poured && this.faucet.quiet) {
+    const quiet = pile
+      ? pile.settled || this.time - this.releasedAt! >= cfg.solids.maxSettle
+      : this.faucet.quiet;
+    if (this.phase === 'echando' && this.poured && quiet) {
       this.quietSince ??= this.time;
       if (this.time - this.quietSince >= cfg.turnEndDelay) {
         this.record(false);
@@ -223,10 +255,14 @@ export class Game {
     this.turn = 0;
     this.loser = null;
     this.pressedAt = null;
-    this.played.add(combo(this.vesselId, this.liquidId));
-    const liquid = getLiquid(this.liquidId);
-    this.glass = new Glass(getVessel(this.vesselId), liquid, this.rng, this.cfg);
+    this.played.add(combo(this.vesselId, this.contentId));
+    // Con sólidos, el vaso de líquido se queda vacío (lo usa el dibujo para el cristal).
+    const id = this.contentId;
+    const liquid = getLiquid(isSolid(id) ? 'agua' : id);
+    const vessel = getVessel(this.vesselId);
+    this.glass = new Glass(vessel, liquid, this.rng, this.cfg);
     this.faucet = new Faucet(liquid, this.rng, this.cfg);
+    this.pile = isSolid(id) ? new Pile(id, vessel, this.rng, this.cfg) : null;
     this.phase = 'turno';
   }
 

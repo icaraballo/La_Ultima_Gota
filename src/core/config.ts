@@ -51,6 +51,19 @@ export const config = {
    * cuello de la botella ese margen es muy poco volumen. foamPerFlow: espuma por volumen echado
    * a caudal máximo (las gotas, un 5 %). foamDecay (1/s): lo rápido que se asienta.
    */
+  /**
+   * Canicas y monedas (UG-DESIGN §7.4), valores de serie del prototipo. Tamaños en píxeles del
+   * motor (el vaso mide 250 de alto y 155 de ancho). interval (s): una pieza cada tanto al
+   * mantener. spawnHeight: desde cuánto por encima del borde caen. El turno acaba cuando nada se
+   * mueve más rápido que calmSpeed durante calmTime (s), o a los maxSettle s de soltar.
+   */
+  solids: {
+    marbleMin: 12, marbleMax: 19, marbleBounce: 0.3, marbleFriction: 0.04,
+    coinScale: 1.6, coinFriction: 0.45, wallFriction: 0.25,
+    interval: 0.22, spawnHeight: 50,
+    calmSpeed: 0.15, calmTime: 0.3, maxSettle: 6,
+  },
+
   liquids: {
     agua: { flowMul: 1, inertia: 0.15, meniscus: 0.025, foamPerFlow: 0, foamDecay: 0.5 },
     aceite: { flowMul: 0.8, inertia: 0.35, meniscus: 0.008, foamPerFlow: 0, foamDecay: 0.5 },

@@ -153,6 +153,16 @@ function pour(g: Game, s: number) {
   for (let i = 0; i < 600 && g.phase === 'echando'; i++) g.step(DT);
 }
 
+/** Piezas grandes y un puñado rápido: desbordan en segundos. Para tests de reglas, no de tacto. */
+const rapido = { ...config, solids: { ...config.solids, marbleMin: 28, marbleMax: 32, coinScale: 3.2, interval: 0.1 } };
+
+/** Mantiene pulsado hasta desbordar (como mucho 40 s) y suelta. */
+function pourToOverflow(g: Game) {
+  g.press();
+  for (let i = 0; i < 40 / DT && g.phase === 'echando'; i++) g.step(DT);
+  g.release();
+}
+
 describe('partida', () => {
   it('toque corto = gotas; mantener = chorro', () => {
     const g = new Game(['Ana', 'Luis'], { seed: 1 });
@@ -349,50 +359,51 @@ describe('contenido: vasos, líquidos y espuma', () => {
   it('aleatorio: se sortea al empezar y no cambia entre rondas si no se pide', () => {
     const vistos = new Set<string>();
     for (let seed = 0; seed < 30; seed++) {
-      const g = new Game(['A', 'B'], { seed, vessel: 'aleatorio', liquid: 'aleatorio' });
-      vistos.add(`${g.vesselId}-${g.liquidId}`);
+      const g = new Game(['A', 'B'], { seed, vessel: 'aleatorio', content: 'aleatorio' });
+      vistos.add(`${g.vesselId}-${g.contentId}`);
     }
     expect(vistos.size).toBeGreaterThan(5);
-    const g = new Game(['A', 'B', 'C', 'D'], { seed: 3, vessel: 'aleatorio', liquid: 'aleatorio' });
-    const primera = `${g.vesselId}-${g.liquidId}`;
+    const g = new Game(['A', 'B', 'C', 'D'], { seed: 3, vessel: 'aleatorio', content: 'aleatorio' });
+    const primera = `${g.vesselId}-${g.contentId}`;
     for (let i = 0; i < 3; i++) {
       g.ready();
       pour(g, 30);
       g.continue();
-      expect(`${g.vesselId}-${g.liquidId}`).toBe(primera);
+      expect(`${g.vesselId}-${g.contentId}`).toBe(primera);
     }
   });
 
   it('continue() mantiene vaso y líquido; continue(true) da una combinación no jugada', () => {
-    const otra = new Game(['A', 'B', 'C'], { seed: 21, vessel: 'copa', liquid: 'cerveza' });
+    const otra = new Game(['A', 'B', 'C'], { seed: 21, vessel: 'copa', content: 'cerveza' });
     otra.ready();
     pour(otra, 30);
     otra.continue();
-    expect([otra.vesselId, otra.liquidId]).toEqual(['copa', 'cerveza']);
-    // Hacen falta 10 rondas: 11 jugadores (por encima del máximo del juego, solo para el test).
-    const nombres = Array.from({ length: 11 }, (_, i) => `J${i + 1}`);
-    const g = new Game(nombres, { seed: 21, vessel: 'copa', liquid: 'cerveza' }, { ...config, maxPlayers: 11 });
-    // Ocho rondas pidiendo combinación nueva: salen las 9 sin repetir ninguna.
-    const vistas = [`${g.vesselId}:${g.liquidId}`];
-    for (let i = 0; i < 8; i++) {
+    expect([otra.vesselId, otra.contentId]).toEqual(['copa', 'cerveza']);
+    // 3 vasos × 5 contenidos = 15. Hacen falta 16 rondas: 17 jugadores (por encima del máximo
+    // del juego, solo para el test).
+    const nombres = Array.from({ length: 17 }, (_, i) => `J${i + 1}`);
+    const g = new Game(nombres, { seed: 21, vessel: 'copa', content: 'cerveza' }, { ...rapido, maxPlayers: 17 });
+    // Catorce rondas pidiendo combinación nueva: salen las 15 sin repetir ninguna.
+    const vistas = [`${g.vesselId}:${g.contentId}`];
+    for (let i = 0; i < 14; i++) {
       g.ready();
-      pour(g, 30);
+      pourToOverflow(g);
       g.continue(true);
-      vistas.push(`${g.vesselId}:${g.liquidId}`);
+      vistas.push(`${g.vesselId}:${g.contentId}`);
     }
-    expect(new Set(vistas).size).toBe(9);
-    // La décima solo evita la de la ronda que acaba de terminar.
-    const anterior = vistas[8];
+    expect(new Set(vistas).size).toBe(15);
+    // La siguiente solo evita la de la ronda que acaba de terminar.
+    const anterior = vistas[14];
     g.ready();
-    pour(g, 30);
+    pourToOverflow(g);
     g.continue(true);
-    expect(`${g.vesselId}:${g.liquidId}`).not.toBe(anterior);
+    expect(`${g.vesselId}:${g.contentId}`).not.toBe(anterior);
   });
 
-  it('las 9 combinaciones se juegan hasta un ganador', () => {
+  it('las 15 combinaciones se juegan hasta un ganador', () => {
     for (const vessel of ['cilindro', 'copa', 'botella'] as const) {
-      for (const liquid of ['agua', 'aceite', 'cerveza'] as const) {
-        const g = new Game(['A', 'B', 'C'], { seed: 5, vessel, liquid });
+      for (const liquid of ['agua', 'aceite', 'cerveza', 'canicas', 'monedas'] as const) {
+        const g = new Game(['A', 'B', 'C'], { seed: 5, vessel, content: liquid }, rapido);
         const r = createRng(9);
         for (let paso = 0; paso < 3000 && g.phase !== 'fin'; paso++) {
           if (g.phase === 'turno') g.ready();
@@ -402,5 +413,81 @@ describe('contenido: vasos, líquidos y espuma', () => {
         expect(g.winner, `${liquid} en ${vessel}`).not.toBeNull();
       }
     }
+  });
+});
+
+describe('canicas y monedas', () => {
+  const partida = (content: 'canicas' | 'monedas', seed = 1, vessel: 'cilindro' | 'copa' | 'botella' = 'cilindro') =>
+    new Game(['A', 'B', 'C'], { seed, vessel, content });
+
+  it('un toque echa una pieza; al pararse todo, pasa el turno', () => {
+    for (const content of ['canicas', 'monedas'] as const) {
+      const g = partida(content);
+      expect(g.pile).not.toBeNull();
+      g.ready();
+      const quien = g.current;
+      pour(g, 0);
+      expect(g.pile!.pieces).toHaveLength(1);
+      expect(g.phase).toBe('turno');
+      expect(g.current).not.toBe(quien);
+      expect(g.history[0].poured).toBe(1);
+      // La pieza ha caído dentro del vaso y está quieta en el fondo.
+      expect(g.pile!.fill.count).toBe(1);
+      expect(g.pile!.fill.height).toBeLessThan(0.2);
+    }
+  });
+
+  it('mantener echa un puñado: una pieza cada intervalo', () => {
+    const g = partida('canicas');
+    g.ready();
+    pour(g, 1);
+    const esperadas = 1 + Math.floor((1 - config.tapThresholdMs / 1000) / config.solids.interval);
+    expect(g.pile!.pieces.length).toBeGreaterThanOrEqual(esperadas - 1);
+    expect(g.pile!.pieces.length).toBeLessThanOrEqual(esperadas + 1);
+  });
+
+  it('las canicas cambian de tamaño entre el mínimo y el máximo', () => {
+    const g = partida('canicas', 3);
+    g.ready();
+    pour(g, 2);
+    const radios = g.pile!.pieces.map(p => p.w);
+    expect(Math.min(...radios)).toBeGreaterThanOrEqual(config.solids.marbleMin);
+    expect(Math.max(...radios)).toBeLessThanOrEqual(config.solids.marbleMax);
+    expect(new Set(radios).size).toBe(radios.length);
+  });
+
+  it('quien hace caer una pieza fuera queda eliminado', () => {
+    for (const content of ['canicas', 'monedas'] as const) {
+      for (const vessel of ['cilindro', 'copa', 'botella'] as const) {
+        const g = new Game(['A', 'B', 'C'], { seed: 2, vessel, content }, rapido);
+        g.ready();
+        const quien = g.current;
+        pourToOverflow(g);
+        expect(g.phase, `${content} en ${vessel}`).toBe('desborde');
+        expect(g.loser).toBe(quien);
+        expect(g.pile!.out).not.toBeNull();
+        g.continue();
+        expect(g.pile!.pieces).toHaveLength(0); // ronda nueva, vaso vacío
+      }
+    }
+  });
+
+  it('entre turnos el montón no se mueve', () => {
+    const g = partida('monedas', 4);
+    g.ready();
+    pour(g, 1.5);
+    expect(g.phase).toBe('turno');
+    const antes = g.pile!.pieces.map(p => [p.x, p.y, p.angle]);
+    for (let i = 0; i < 300; i++) g.step(DT);
+    expect(g.pile!.pieces.map(p => [p.x, p.y, p.angle])).toEqual(antes);
+  });
+
+  it('con la misma semilla y las mismas pulsaciones, el montón queda igual', () => {
+    const jugar = () => {
+      const g = partida('monedas', 8);
+      for (const s of [0, 1, 0.5, 0]) { g.ready(); pour(g, s); }
+      return g.pile!.pieces.map(p => [Math.round(p.x * 1000), Math.round(p.y * 1000)]);
+    };
+    expect(jugar()).toEqual(jugar());
   });
 });

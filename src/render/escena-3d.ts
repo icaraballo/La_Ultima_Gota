@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import { config } from '../core/config';
 import type { Game } from '../core/game';
+import { isSolid } from '../core/contents';
 import type { LiquidId } from '../core/liquids';
 import type { Parcel } from '../core/pour';
+import { SOLID_PX_PER_H, type Pile } from '../core/solids';
 import type { Vessel } from '../core/vessels';
-import { LIQUIDOS, TEMAS, type ColoresEscena, type TemaId } from './temas';
+import { LIQUIDOS, SOLIDOS, TEMAS, type ColoresEscena, type TemaId } from './temas';
 
 // La escena 3D en cartoon suave (v0.5.0): colores planos en dos tonos y contorno de tinta.
 // El vaso y el líquido se tornean (LatheGeometry) con el mismo perfil r(h) que usa la lógica,
@@ -28,18 +30,27 @@ const PX = 0.0075;
 const WALL_Z = -2.4;
 const TABLE_FRONT = 1.6;
 const TILT = THREE.MathUtils.degToRad(9);
+/** Píxeles del motor de las piezas → unidades de la escena (el vaso mide 250 px y H de alto). */
+const SOLID_K = H / SOLID_PX_PER_H;
+const MAX_PIECES = 400;
 
 /** Luz en espacio de cámara: de arriba a la izquierda, así la sombra cae a la derecha. */
 const LUZ = new THREE.Vector3(-0.6, 0.3, 0.75).normalize();
 
 const VS = /* glsl */ `
   varying vec3 vN;
+  varying vec3 vCol;
   void main() {
     vec3 n = normal;
     vec4 p = vec4(position, 1.0);
     #ifdef USE_INSTANCING
       n = mat3(instanceMatrix) * n;
       p = instanceMatrix * p;
+    #endif
+    #ifdef USE_INSTANCING_COLOR
+      vCol = instanceColor;
+    #else
+      vCol = vec3(1.0);
     #endif
     vN = normalize(normalMatrix * n);
     gl_Position = projectionMatrix * modelViewMatrix * p;
@@ -50,10 +61,11 @@ const FS_TOON = /* glsl */ `
   uniform vec3 uLuz;
   uniform float uUmbral;
   varying vec3 vN;
+  varying vec3 vCol;
   void main() {
     vec3 n = normalize(vN);
     if (!gl_FrontFacing) n = -n;
-    gl_FragColor = vec4(dot(n, uLuz) > uUmbral ? uClaro : uOscuro, 1.0);
+    gl_FragColor = vec4((dot(n, uLuz) > uUmbral ? uClaro : uOscuro) * vCol, 1.0);
     #include <colorspace_fragment>
   }`;
 /** Casco invertido: la misma malla, hinchada por la normal y vista por detrás = contorno. */
@@ -233,6 +245,21 @@ export class Escena3D {
   private knob = toon('#000', '#000', 0.2);
   private lever = new THREE.Group();
   private leverAngle = 0;
+  private faucet = new THREE.Group();
+  /** Con canicas o monedas, una tolva en lugar del grifo. */
+  private hopper = new THREE.Group();
+
+  // Canicas y monedas: color por pieza (instanceColor) sobre un toon blanco/gris.
+  private pieceMat = toon('#ffffff', '#b4b4b4', 0.3);
+  private marbles: THREE.InstancedMesh;
+  private marblesInk: THREE.InstancedMesh;
+  private marblesHi: THREE.InstancedMesh;
+  private coins: THREE.InstancedMesh;
+  private coinsInk: THREE.InstancedMesh;
+  private coinRims: THREE.InstancedMesh;
+  private outRing: THREE.Mesh;
+  private outRingMat = basic('#e8735f');
+  private color = new THREE.Color();
 
   private limitRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.01, 6, SEGMENTS), basic('#e8735f'));
 
@@ -279,6 +306,28 @@ export class Escena3D {
     scene.add(this.wall, top, ...lines, lip, edge, under, this.shadow);
 
     this.buildFaucet();
+
+    const sphere = new THREE.SphereGeometry(1, 18, 12);
+    const disc = new THREE.CylinderGeometry(0.5, 0.5, 1, 24);
+    this.marbles = new THREE.InstancedMesh(sphere, this.pieceMat, MAX_PIECES);
+    this.marblesInk = new THREE.InstancedMesh(sphere, this.ink.tiny, MAX_PIECES);
+    this.marblesHi = new THREE.InstancedMesh(sphere, basic('#fff', { transparent: true, opacity: 0.75 }), MAX_PIECES);
+    this.coins = new THREE.InstancedMesh(disc, this.pieceMat, MAX_PIECES);
+    this.coinsInk = new THREE.InstancedMesh(disc, this.ink.tiny, MAX_PIECES);
+    // Aro de las bimetálicas: un disco algo más fino y ancho, del color del aro.
+    this.coinRims = new THREE.InstancedMesh(disc, this.pieceMat, MAX_PIECES);
+    for (const m of [this.marbles, this.coins, this.coinRims]) m.setColorAt(0, this.color.set('#fff'));
+    for (const m of [this.marbles, this.marblesInk, this.marblesHi, this.coins, this.coinsInk, this.coinRims]) {
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      m.frustumCulled = false;
+      m.count = 0;
+      scene.add(m);
+    }
+    this.outRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.012, 8, 40), this.outRingMat);
+    this.outRing.visible = false;
+    this.outRing.renderOrder = 6;
+    (this.outRing.material as THREE.Material).depthTest = false;
+    scene.add(this.outRing);
 
     // Superficie: disco de radio 1 con anillos, que se deforma en cada frame (ondas y cúpula).
     const rings: THREE.Vector2[] = [];
@@ -403,7 +452,21 @@ export class Escena3D {
     this.lever.position.set(px, py, 0);
     this.lever.add(bar, barInk, knob, knobInk, knobHi, hub, hubInk);
 
-    this.scene.add(pipe, pipeInk, pipeHi, nozzle, nozzleInk, nozzleHi, post, postInk, this.lever);
+    this.faucet.add(pipe, pipeInk, pipeHi, nozzle, nozzleInk, nozzleHi, post, postInk, this.lever);
+
+    // Tolva: un tubo ancho y abierto que acaba a la altura de la boca del grifo.
+    const tubeGeo = new THREE.CylinderGeometry(0.26, 0.2, 0.75, 28, 1, true);
+    const tube = new THREE.Mesh(tubeGeo, this.metal);
+    const tubeInk = new THREE.Mesh(tubeGeo, this.ink.faucet);
+    const tubeIn = new THREE.Mesh(tubeGeo, basic('#000', { side: THREE.BackSide }));
+    tubeIn.userData.oscuro = true;
+    const tubeHi = new THREE.Mesh(new THREE.BoxGeometry(5 * PX, 0.5, 2 * PX), this.metalHi);
+    tubeHi.position.set(-0.13, 0.02, 0.22);
+    for (const m of [tube, tubeInk, tubeIn]) m.position.y = 0;
+    this.hopper.add(tubeIn, tube, tubeInk, tubeHi);
+    this.hopper.position.y = SPOUT_Y + 0.375;
+    this.hopper.visible = false;
+    this.scene.add(this.faucet, this.hopper);
   }
 
   setTema(id: TemaId) {
@@ -425,6 +488,10 @@ export class Escena3D {
     this.metalHi.color.set(c.metalBrillo);
     setToon(this.knob, c.pomo, new THREE.Color(c.pomo).multiplyScalar(0.75).getStyle());
     this.scene.background = new THREE.Color(c.debajo);
+    this.hopper.traverse(o => {
+      if (o.userData.oscuro) ((o as THREE.Mesh).material as THREE.MeshBasicMaterial).color.set(c.tinta);
+    });
+    this.outRingMat.color.set(TEMAS[id].ui.peligro);
     this.wallKey = '';
   }
 
@@ -589,6 +656,59 @@ export class Escena3D {
     this.lastLiquid = this.lastFoamTop = this.lastSurfR = this.lastDome = -1;
   }
 
+  /** Canicas y monedas en el corte del vaso (z = 0), y un aro en la que se ha salido. */
+  private drawPile(pile: Pile | null) {
+    const m = this.tmp;
+    let nm = 0, nc = 0, nr = 0;
+    if (pile) {
+      for (const p of pile.pieces) {
+        if (nm >= MAX_PIECES || nc >= MAX_PIECES) break;
+        const x = p.x * SOLID_K, y = p.y * SOLID_K;
+        if (p.kind === 'canicas') {
+          const r = p.w * SOLID_K;
+          this.setInstance(this.marbles, nm, x, y, 0, r);
+          this.setInstance(this.marblesInk, nm, x, y, 0, r);
+          this.setInstance(this.marblesHi, nm, x - r * 0.35, y + r * 0.4, r * 0.75, r * 0.25);
+          this.marbles.setColorAt(nm, this.color.set(SOLIDOS.canicas[p.variant % SOLIDOS.canicas.length]));
+          nm++;
+        } else {
+          const w = p.w * SOLID_K, h = p.h * SOLID_K;
+          const c = SOLIDOS.monedas[p.variant];
+          m.position.set(x, y, 0);
+          m.rotation.set(0, 0, p.angle);
+          m.scale.set(w, h, w);
+          m.updateMatrix();
+          this.coins.setMatrixAt(nc, m.matrix);
+          this.coinsInk.setMatrixAt(nc, m.matrix);
+          this.coins.setColorAt(nc, this.color.set(c.aro ? c.aro : c.cuerpo));
+          nc++;
+          if (c.aro) {
+            // El centro de la bimetálica asoma por delante, un poco más fino.
+            m.scale.set(w * 0.62, h * 1.06, w * 1.02);
+            m.updateMatrix();
+            this.coinRims.setMatrixAt(nr, m.matrix);
+            this.coinRims.setColorAt(nr, this.color.set(c.cuerpo));
+            nr++;
+          }
+          m.rotation.set(0, 0, 0);
+        }
+      }
+    }
+    this.marbles.count = this.marblesInk.count = this.marblesHi.count = nm;
+    this.coins.count = this.coinsInk.count = nc;
+    this.coinRims.count = nr;
+    for (const mesh of [this.marbles, this.marblesInk, this.marblesHi, this.coins, this.coinsInk, this.coinRims]) {
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
+    const out = pile?.out;
+    this.outRing.visible = !!out;
+    if (out) {
+      this.outRing.position.set(out.x * SOLID_K, out.y * SOLID_K, 0.3);
+      this.outRing.scale.setScalar(((out.kind === 'canicas' ? out.w : out.w / 2) + 7) * SOLID_K);
+    }
+  }
+
   private setLiquid(id: LiquidId) {
     this.liquidId = id;
     const l = LIQUIDOS[id];
@@ -636,7 +756,12 @@ export class Escena3D {
     this.fit();
     const { glass, faucet } = game;
     if (glass.vessel !== this.vessel) this.setVessel(glass.vessel);
-    if (game.liquidId !== this.liquidId) this.setLiquid(game.liquidId);
+    const solid = isSolid(game.contentId);
+    const liquidId: LiquidId = isSolid(game.contentId) ? 'agua' : game.contentId;
+    if (liquidId !== this.liquidId) this.setLiquid(liquidId);
+    this.faucet.visible = !solid;
+    this.hopper.visible = solid;
+    this.drawPile(game.pile);
     if (glass !== this.lastGlass) {
       this.lastGlass = glass;
       this.overflowSince = null;
@@ -645,7 +770,7 @@ export class Escena3D {
       this.prevDrops.clear();
     }
     const v = this.vessel!;
-    const l = LIQUIDOS[game.liquidId];
+    const l = LIQUIDOS[liquidId];
 
     // Alturas: líquido, espuma encima y, si pasa del borde, la cúpula del menisco.
     const top = glass.height;

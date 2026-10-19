@@ -101,6 +101,20 @@ export const LIQUIDOS: Record<LiquidId, ColoresLiquido> = {
   },
 };
 
+/** Canicas: un color por variante (core elige el índice). Monedas: por tipo de COINS, de 1
+ * céntimo a 2 €: cuerpo y, en las bimetálicas, el aro. */
+export const SOLIDOS = {
+  canicas: ['#E4573D', '#2F8FD8', '#F2B632', '#39A86B', '#8E5BD6', '#E07AB1', '#22B5B0'],
+  monedas: [
+    ...Array(3).fill({ cuerpo: '#C9814F' }),
+    ...Array(3).fill({ cuerpo: '#D9A63C' }),
+    { cuerpo: '#B9C0C6', aro: '#D9A63C' },
+    { cuerpo: '#D9A63C', aro: '#B9C0C6' },
+  ] as { cuerpo: string; aro?: string }[],
+  /** Puntos de los botones de la pantalla de jugadores. */
+  punto: { canicas: '#E4573D', monedas: '#D9A63C' },
+};
+
 const K_TEMA = 'ultima-gota:tema';
 
 /** El último tema elegido en este navegador; la primera vez, noche. */

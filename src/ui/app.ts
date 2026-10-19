@@ -1,11 +1,13 @@
 import { config } from '../core/config';
 import { Game, type GameOptions, type Phase } from '../core/game';
-import { LIQUID_IDS, type LiquidId } from '../core/liquids';
+import { CONTENT_IDS, isSolid, type ContentId } from '../core/contents';
+import { LIQUID_IDS } from '../core/liquids';
+import { SOLID_IDS } from '../core/solids';
 import { VESSEL_IDS, type VesselId } from '../core/vessels';
 import { t } from '../i18n';
 import { Barra2D } from '../render/barra-2d';
 import { Escena3D } from '../render/escena-3d';
-import { aplicarTemas, guardarTema, LIQUIDOS, temaGuardado, type TemaId } from '../render/temas';
+import { aplicarTemas, guardarTema, LIQUIDOS, SOLIDOS, temaGuardado, type TemaId } from '../render/temas';
 import { createDebug } from './debug';
 import { iconos } from './iconos';
 
@@ -22,7 +24,8 @@ const K_PARTIDA = 'ultima-gota:partida';
 interface Preparacion {
   names: string[];
   vessel: VesselId | 'aleatorio';
-  liquid: LiquidId | 'aleatorio';
+  /** Qué se echa: un líquido, canicas o monedas (se guarda como «liquid» desde la v0.4.0). */
+  liquid: ContentId | 'aleatorio';
   /** «Empezar en orden aleatorio»: se baraja una vez al crear la partida. */
   randomOrder: boolean;
 }
@@ -40,6 +43,10 @@ function loadPrep(): Preparacion {
 function savePrep(p: Preparacion) {
   try { localStorage.setItem(K_PARTIDA, JSON.stringify(p)); } catch { /* sin almacenamiento */ }
 }
+
+/** Punto del color de lo que se echa. */
+const puntoContenido = (id: ContentId) =>
+  `<span class="punto con-borde" style="background:${isSolid(id) ? SOLIDOS.punto[id] : LIQUIDOS[id].cuerpo}"></span>`;
 
 /** Punto de color de cada jugador (por su posición en la lista). */
 const punto = (i: number) => `<span class="punto" style="background:var(--punto-${i % 10})"></span>`;
@@ -77,13 +84,13 @@ export function startApp(root: HTMLElement) {
   vista.setTema(tema);
   const debug = createDebug(root, vista);
 
-  const zonaReposo = `${iconos.gota}<span>${t.zonaEchar}</span>`;
   let zonaUsada: boolean | null = null;
   function setZona(usada: boolean) {
     if (usada === zonaUsada) return;
     zonaUsada = usada;
     zona.classList.toggle('usada', usada);
-    zona.innerHTML = usada ? `<span>${t.cayendo}</span>` : zonaReposo;
+    const piezas = game?.pile != null;
+    zona.innerHTML = usada ? `<span>${t.cayendo}</span>` : `${iconos.gota}<span>${piezas ? t.zonaPiezas : t.zonaEchar}</span>`;
   }
 
   const botonTema = () => tema === 'noche'
@@ -129,10 +136,10 @@ export function startApp(root: HTMLElement) {
         ${[...VESSEL_IDS, 'aleatorio' as const].map(id => `<button class="opcion${prep.vessel === id ? ' elegida' : ''}" data-valor="${id}"${id === 'aleatorio' ? ` aria-label="${t.vasoAzar}"` : ''}>${id === 'aleatorio' ? iconos.dado : iconos.vasos[id]}${t.vasos[id]}</button>`).join('')}
       </div>
       <h2>${t.liquido}</h2>
-      <div class="opciones" data-opcion="liquid">
-        ${[...LIQUID_IDS, 'aleatorio' as const].map(id => id === 'aleatorio'
-          ? `<button class="opcion${prep.liquid === id ? ' elegida' : ''}" data-valor="${id}" aria-label="${t.liquidoAzar}">${iconos.dado}</button>`
-          : `<button class="opcion${prep.liquid === id ? ' elegida' : ''}" data-valor="${id}"><span class="punto con-borde" style="background:${LIQUIDOS[id].cuerpo}"></span>${t.liquidos[id]}</button>`).join('')}
+      <div class="opciones tres" data-opcion="liquid">
+        ${[...CONTENT_IDS, 'aleatorio' as const].map(id => id === 'aleatorio'
+          ? `<button class="opcion${prep.liquid === id ? ' elegida' : ''}" data-valor="${id}" aria-label="${t.liquidoAzar}">${iconos.dado}${t.liquidos.aleatorio}</button>`
+          : `<button class="opcion${prep.liquid === id ? ' elegida' : ''}" data-valor="${id}">${puntoContenido(id)}${t.liquidos[id]}</button>`).join('')}
       </div>
       <label class="check"><input type="checkbox" id="orden-aleatorio" ${prep.randomOrder ? 'checked' : ''}> ${t.empezarAleatorio}</label>
       </div>
@@ -186,7 +193,9 @@ export function startApp(root: HTMLElement) {
           <h3>${t.vasosTitulo}</h3>
           <ul>${VESSEL_IDS.map(id => tarjeta(prep.vessel === id, `${iconos.vasos[id]}${t.vasos[id]}`, t.infoVasos[id])).join('')}</ul>
           <h3>${t.liquidosTitulo}</h3>
-          <ul>${LIQUID_IDS.map(id => tarjeta(prep.liquid === id, `<span class="punto con-borde" style="background:${LIQUIDOS[id].cuerpo}"></span>${t.liquidos[id]}`, t.infoLiquidos[id])).join('')}</ul>
+          <ul>${LIQUID_IDS.map(id => tarjeta(prep.liquid === id, `${puntoContenido(id)}${t.liquidos[id]}`, t.infoLiquidos[id])).join('')}</ul>
+          <h3>${t.solidosTitulo}</h3>
+          <ul>${SOLID_IDS.map(id => tarjeta(prep.liquid === id, `${puntoContenido(id)}${t.liquidos[id]}`, t.infoSolidos[id])).join('')}</ul>
           <p class="hoja-pie">${t.infoPie}</p>
         </div>
       </section>`;
@@ -214,10 +223,11 @@ export function startApp(root: HTMLElement) {
     const options: GameOptions = {
       seed: (Math.random() * 2 ** 32) >>> 0,
       vessel: prep.vessel,
-      liquid: prep.liquid,
+      content: prep.liquid,
       randomOrder: prep.randomOrder,
     };
     game = new Game(finalNames, options);
+    zonaUsada = null;
     shownPhase = null;
     pJugadores.hidden = true;
     pJuego.hidden = false;
@@ -272,17 +282,18 @@ export function startApp(root: HTMLElement) {
     capa.hidden = g.phase === 'echando';
     capaArmada = false;
     capa.className = 'capa ' + g.phase;
+    if (g.phase === 'turno') zonaUsada = null; // el texto cambia si la ronda pasa a piezas
     if (g.phase === 'turno') {
       capa.innerHTML = `
         <p class="pequeno">${t.pasaElMovil}</p>
         <h1 class="grande">${punto(g.current)}${t.turnoDe(nombre(g.current))}</h1>
-        <p class="combinacion">${t.combinacion(t.liquidos[g.liquidId], t.vasos[g.vesselId])}</p>
+        <p class="combinacion">${t.combinacion(t.liquidos[g.contentId], t.vasos[g.vesselId])}</p>
         <button class="boton principal" id="listo">${t.listo}</button>`;
     } else if (g.phase === 'desborde') {
       const quedan = g.alive.length;
       capa.innerHTML = `
         <div class="tarjeta">
-          <h2>${t.eliminado(nombre(g.loser!))}</h2>
+          <h2>${isSolid(g.contentId) ? t.eliminadoPieza(nombre(g.loser!), g.contentId) : t.eliminado(nombre(g.loser!))}</h2>
           ${quedan > 1 ? `<p>${t.quedan(quedan)}</p>` : ''}
           <button class="boton principal" id="seguir">${quedan > 1 ? t.siguienteRonda : t.verGanador}</button>
           ${quedan > 1 ? `<button class="boton con-icono" id="seguir-azar">${iconos.dado}${t.combinacionAleatoria}</button>` : ''}

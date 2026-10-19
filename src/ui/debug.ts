@@ -30,6 +30,11 @@ const top = <K extends keyof typeof config>(key: K, label: string, min: number, 
   get: () => config[key] as number,
   set: v => { (config as Record<string, unknown>)[key] = v; },
 });
+const solido = (key: keyof typeof config.solids, label: string, min: number, max: number, step: number): Param => ({
+  label, min, max, step,
+  get: () => config.solids[key],
+  set: v => { config.solids[key] = v; },
+});
 const peso = (i: number, label: string): Param => ({
   label, min: 0, max: 1, step: 0.01,
   get: () => config.dropCountWeights[i],
@@ -63,6 +68,12 @@ const PARAMS: { grupo: string; params: Param[] }[] = [
       ] : []),
     ],
   })),
+  { grupo: 'Canicas y monedas', params: [
+    solido('marbleMin', 'Canica más pequeña (px)', 6, 30, 1),
+    solido('marbleMax', 'Canica más grande (px)', 6, 34, 1),
+    solido('coinScale', 'Tamaño de monedas (×)', 1, 4, 0.1),
+    solido('interval', 'Una pieza cada (s) al mantener', 0.08, 0.6, 0.01),
+  ] },
   { grupo: 'Ronda', params: [
     top('meniscusVariance', 'Variación oculta (±)', 0, 0.5, 0.01),
     top('turnEndDelay', 'Pausa al acabar turno (s)', 0, 2, 0.05),
@@ -160,6 +171,7 @@ export function createDebug(root: HTMLElement, barra: Vista) {
       ...Object.fromEntries((Object.keys(config) as (keyof typeof config)[])
         .filter(k => typeof config[k] === 'number' || Array.isArray(config[k])).map(k => [k, config[k]])),
       liquids: config.liquids,
+      solids: config.solids,
     };
     const txt = JSON.stringify(valores, null, 1);
     try {
@@ -188,9 +200,12 @@ export function createDebug(root: HTMLElement, barra: Vista) {
       const { glass, faucet } = game;
       const aire = faucet.inAir.reduce((s, p) => s + p.volume, 0);
       const ultimo = game.history[game.history.length - 1];
-      $('dbg-mini').textContent = `${pct(glass.volume)} / ${pct(glass.limit)}`;
+      $('dbg-mini').textContent = game.pile
+        ? `${game.pile.fill.count} piezas · ${pct(game.pile.fill.height)}`
+        : `${pct(glass.volume)} / ${pct(glass.limit)}`;
       $('dbg-lecturas').textContent = [
-        `ronda ${game.round} · ${game.liquidId} en ${game.vesselId} · ${game.phase}`,
+        `ronda ${game.round} · ${game.contentId} en ${game.vesselId} · ${game.phase}`,
+        ...(game.pile ? [`piezas    ${game.pile.fill.count} dentro de ${game.pile.pieces.length}`, `montón    ${pct(game.pile.fill.height)} del vaso`] : []),
         `volumen   ${pct(glass.volume)}`,
         `espuma    ${pct(glass.foam)}`,
         `altura    ${pct(glass.height)}`,

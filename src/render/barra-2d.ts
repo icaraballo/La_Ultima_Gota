@@ -1,5 +1,6 @@
 import type { Game } from '../core/game';
-import { TEMAS, type TemaId } from './temas';
+import { SOLID_PX_PER_H, SOLID_PX_RADIUS } from '../core/solids';
+import { SOLIDOS, TEMAS, type TemaId } from './temas';
 
 // Vista provisional de la fase 1: el vaso de perfil en 2D. La sustituye la escena 3D en la
 // fase 3. Sin números: solo se ve el nivel, lo que cae y el menisco abombado.
@@ -110,6 +111,34 @@ export class Barra2D {
       ctx.beginPath();
       ctx.ellipse(cx, mesaY + 3, gw * (0.55 + 0.5 * k), 6, 0, 0, Math.PI * 2);
       ctx.fill();
+    }
+
+    // Canicas y monedas (el vaso 2D es recto: se dibujan con su posición en el corte del vaso).
+    if (game.pile) {
+      const kx = (gw / 2) / SOLID_PX_RADIUS, ky = gh / SOLID_PX_PER_H;
+      for (const p of game.pile.pieces) {
+        ctx.save();
+        ctx.translate(cx + p.x * kx, mesaY - p.y * ky);
+        ctx.rotate(-p.angle);
+        if (p.kind === 'canicas') {
+          ctx.fillStyle = SOLIDOS.canicas[p.variant % SOLIDOS.canicas.length];
+          ctx.beginPath();
+          ctx.ellipse(0, 0, p.w * kx, p.w * ky, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = SOLIDOS.monedas[p.variant].cuerpo;
+          ctx.fillRect(-p.w * kx / 2, -p.h * ky / 2, p.w * kx, p.h * ky);
+        }
+        ctx.restore();
+      }
+      if (game.pile.out) {
+        const o = game.pile.out;
+        ctx.strokeStyle = '#e8735f';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(cx + o.x * kx, mesaY - o.y * ky, (o.kind === 'canicas' ? o.w : o.w / 2) * kx + 6, 0, Math.PI * 2);
+        ctx.stroke();
+      }
     }
 
     // Paredes del vaso.

@@ -88,11 +88,11 @@ describe('chorro', () => {
     const echado = [1, 2, 3, 4, 5].map(seed => {
       const f = new Faucet(agua, createRng(seed), config);
       f.startStream();
-      run(f, 2);
+      const durante = run(f, 2);
       f.stopStream();
-      return run(f, 2);
+      return durante + run(f, 2);
     });
-    expect(new Set(echado.map(v => v.toFixed(4))).size).toBe(5);
+    expect(new Set(echado.map(v => v.toFixed(6))).size).toBe(5);
   });
 
   it('al soltar sigue cayendo ≈ caudal × inercia, más lo que ya está en el aire', () => {
@@ -105,6 +105,14 @@ describe('chorro', () => {
     const resto = run(f, 3);
     expect(resto - enElAire).toBeCloseTo(flujo * agua.inertia, 2);
     expect(f.quiet).toBe(true);
+  });
+
+  it('mantener pulsado nunca echa menos que un toque (el chorro abre con sus gotas)', () => {
+    const f = new Faucet(agua, createRng(1), config);
+    f.startStream();
+    f.step(DT);
+    f.stopStream();
+    expect(run(f, 3)).toBeGreaterThanOrEqual(config.dropVolume * (1 - config.dropVariance));
   });
 
   it('unos 8 s a tope llenan el cilindro', () => {

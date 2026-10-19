@@ -9,8 +9,10 @@ export const config = {
   /** Por debajo de esto (ms) la pulsación es un toque; por encima, chorro. */
   tapThresholdMs: 180,
 
-  /** Volumen base de una gota (~170 gotas para llenar un cilindro). */
-  dropVolume: 0.006,
+  /** Volumen base de una gota (~40 gotas para llenar un cilindro). Era 0,006 (el documento):
+   * con una pulsación por turno, «solo tocar» alargaba la ronda de 4 a ~31 vueltas; con 0,025,
+   * ~7,5 si todos tocan y ~2,3 si echan chorro (objetivo: 3–6). Bots, 19-10-2026. */
+  dropVolume: 0.025,
   /** Variación de cada gota: ±30 %. */
   dropVariance: 0.30,
   /** Probabilidad de que un toque suelte 1, 2 o 3 gotas. */

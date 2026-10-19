@@ -52,10 +52,13 @@ export class Faucet {
     return count;
   }
 
-  /** Empieza el chorro (al pasar del umbral de toque). */
+  /** Empieza el chorro (al pasar del umbral de toque). Abre con el goteo de un toque: así
+   * mantener pulsado nunca echa menos que tocar (si no, un chorro de 0,2 s era la jugada más
+   * segura, diez veces más pequeña que una gota, y la ronda no acababa nunca). */
   startStream() {
     this.open = true;
     this.openedAt = this.time;
+    this.tap();
   }
 
   /** Suelta: el caudal no corta en seco, se apaga con la inercia del líquido. */

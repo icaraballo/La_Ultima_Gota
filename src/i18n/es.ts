@@ -16,7 +16,7 @@ export const es = {
   listo: '¡Listo!',
   despues: (nombre: string) => `Después: ${nombre}`,
   zonaEchar: 'Toca: gota · Mantén: chorro',
-  paso: 'Paso',
+  cayendo: '…',
 
   eliminado: (nombre: string) => `${nombre} ha dejado caer la última gota`,
   quedan: (n: number) => `Quedan ${n}`,

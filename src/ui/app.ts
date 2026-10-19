@@ -2,6 +2,7 @@ import { config } from '../core/config';
 import { Game, type Phase } from '../core/game';
 import { t } from '../i18n';
 import { Barra2D } from '../render/barra-2d';
+import { createDebug } from './debug';
 
 // Pantallas mínimas de la fase 1: jugadores, «Turno de X», el vaso, eliminado y ganador.
 // El flujo completo (opciones, resumen, cómo jugar, ajustes) es la fase 4.
@@ -26,7 +27,6 @@ export function startApp(root: HTMLElement) {
       <canvas id="j-vaso"></canvas>
       <footer class="controles">
         <button class="zona" id="j-zona">${t.zonaEchar}</button>
-        <button class="boton paso" id="j-paso" disabled>${t.paso}</button>
       </footer>
       <div class="capa" id="j-capa" hidden></div>
     </section>
@@ -34,9 +34,9 @@ export function startApp(root: HTMLElement) {
   `;
   const $ = (id: string) => document.getElementById(id)!;
   const pJugadores = $('p-jugadores'), pJuego = $('p-juego'), capa = $('j-capa');
-  const paso = $('j-paso') as HTMLButtonElement;
   const zona = $('j-zona');
   const barra = new Barra2D($('j-vaso') as HTMLCanvasElement);
+  const debug = createDebug(root, barra);
 
   // ── Jugadores ──────────────────────────────────────────────
   function showPlayers() {
@@ -44,7 +44,7 @@ export function startApp(root: HTMLElement) {
     pJuego.hidden = true;
     pJugadores.hidden = false;
     pJugadores.innerHTML = `
-      <h1 class="logo">${t.titulo}</h1>
+      <h1 class="logo" id="logo">${t.titulo}</h1>
       <p class="lema">${t.lema}</p>
       <h2>${t.jugadores}</h2>
       <ol class="lista">
@@ -100,7 +100,15 @@ export function startApp(root: HTMLElement) {
   zona.addEventListener('pointerup', release);
   zona.addEventListener('pointercancel', release);
   zona.addEventListener('contextmenu', e => e.preventDefault());
-  paso.addEventListener('click', () => game?.pass());
+
+  // Modo depuración: ?debug en la URL o mantener pulsado el título 1 s.
+  let logoTimer = 0;
+  pJugadores.addEventListener('pointerdown', e => {
+    if ((e.target as HTMLElement).id === 'logo') logoTimer = window.setTimeout(() => debug.toggle(), 1000);
+  });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const) {
+    pJugadores.addEventListener(ev, () => clearTimeout(logoTimer));
+  }
 
   capa.addEventListener('click', e => {
     const el = (e.target as HTMLElement).closest('button');
@@ -153,8 +161,10 @@ export function startApp(root: HTMLElement) {
         shownPhase = game.phase;
         showPhase(game);
       }
-      paso.disabled = !game.canPass;
+      zona.classList.toggle('usada', game.poured);
+      zona.textContent = game.poured ? t.cayendo : t.zonaEchar;
       barra.draw(game, nowMs / 1000);
+      debug.update(game);
     } else {
       acc = 0;
     }

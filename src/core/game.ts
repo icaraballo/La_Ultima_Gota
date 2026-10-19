@@ -7,10 +7,12 @@ import { getVessel, type VesselId } from './vessels';
 
 // La partida: jugadores, turnos, rondas y eliminación. Recibe pulsaciones (press/release) y
 // avanza con step(dt) a paso fijo; quien dibuja solo lee su estado.
+// Una sola pulsación por turno (decisión del 19-10-2026): al soltar, el turno acaba en cuanto
+// termina de caer lo echado. Si eso desborda, pierde quien echó.
 
 /**
  * - `turno`: pantalla «Turno de X», esperando a «¡Listo!» (para pasar el móvil).
- * - `echando`: el jugador echa; termina con «Paso».
+ * - `echando`: el jugador echa (una pulsación); al soltar y caer todo, pasa al siguiente.
  * - `desborde`: alguien ha desbordado y está eliminado; esperando «Siguiente ronda».
  * - `fin`: queda uno, el ganador.
  */
@@ -29,8 +31,10 @@ export interface TurnRecord {
   poured: number;
   /** Cómo quedó el vaso al pasar (o al desbordar). */
   volumeAfter: number;
-  /** Segundos desde «¡Listo!» hasta «Paso» (o el desborde). */
-  duration: number;
+  /** Segundos desde «¡Listo!» hasta que empezó a echar (lo que dudó). */
+  hesitation: number;
+  /** Segundos que mantuvo pulsado. */
+  held: number;
   overflowed: boolean;
 }
 
@@ -58,9 +62,14 @@ export class Game {
 
   private rng: Rng;
   private pressedAt: number | null = null;
+  /** Cuándo empezó la pulsación de este turno (no se borra al soltar). */
+  private pressStartedAt: number | null = null;
+  private releasedAt: number | null = null;
+  private quietSince: number | null = null;
   private pouredThisTurn = 0;
-  private hasPoured = false;
   private turnStartedAt = 0;
+  /** Lo que duró la última pulsación (s), para el modo depuración. */
+  lastHeld = 0;
 
   constructor(names: string[], private options: GameOptions, private cfg: Config = defaultConfig) {
     if (names.length < cfg.minPlayers || names.length > cfg.maxPlayers) {
@@ -83,9 +92,14 @@ export class Game {
     return this.players.flatMap((p, i) => (p.alive ? [i] : []));
   }
 
-  /** Se puede pasar si ya ha echado algo y no queda nada saliendo ni en el aire. */
-  get canPass(): boolean {
-    return this.phase === 'echando' && this.hasPoured && this.pressedAt === null && this.faucet.quiet;
+  /** Ya ha echado en este turno: no admite otra pulsación, solo espera a que caiga. */
+  get poured(): boolean {
+    return this.releasedAt !== null;
+  }
+
+  /** Está pulsando ahora mismo. */
+  get pressing(): boolean {
+    return this.pressedAt !== null;
   }
 
   /** «¡Listo!» en la pantalla de turno. */
@@ -93,29 +107,28 @@ export class Game {
     if (this.phase !== 'turno') return;
     this.phase = 'echando';
     this.pouredThisTurn = 0;
-    this.hasPoured = false;
+    this.pressedAt = null;
+    this.pressStartedAt = null;
+    this.releasedAt = null;
+    this.quietSince = null;
     this.turnStartedAt = this.time;
   }
 
   press() {
-    if (this.phase !== 'echando' || this.pressedAt !== null) return;
+    if (this.phase !== 'echando' || this.pressedAt !== null || this.poured) return;
     this.pressedAt = this.time;
+    this.pressStartedAt = this.time;
   }
 
   release() {
     if (this.pressedAt === null) return;
+    if (this.phase === 'echando') {
+      if (this.faucet.streaming) this.faucet.stopStream();
+      else this.faucet.tap();
+      this.releasedAt = this.time;
+      this.lastHeld = this.time - this.pressedAt;
+    }
     this.pressedAt = null;
-    if (this.phase !== 'echando') return;
-    if (this.faucet.streaming) this.faucet.stopStream();
-    else this.faucet.tap();
-    this.hasPoured = true;
-  }
-
-  pass() {
-    if (!this.canPass) return;
-    this.record(false);
-    this.turn = (this.turn + 1) % this.order.length;
-    this.phase = 'turno';
   }
 
   /** «Siguiente ronda» tras un desborde: nueva ronda, o fin si solo queda uno. */
@@ -134,10 +147,9 @@ export class Game {
     this.time += dt;
     const { cfg } = this;
 
-    if (this.phase === 'echando' && this.pressedAt !== null && !this.faucet.streaming
+    if (this.phase === 'echando' && this.pressedAt !== null && !this.poured && !this.faucet.streaming
         && (this.time - this.pressedAt) * 1000 >= cfg.tapThresholdMs) {
       this.faucet.startStream();
-      this.hasPoured = true;
     }
 
     const arrived = this.faucet.step(dt);
@@ -152,6 +164,16 @@ export class Game {
       this.loser = this.current;
       this.players[this.current].alive = false;
       this.phase = 'desborde';
+    }
+
+    // Ya ha echado y no cae nada: tras una pausa corta para ver cómo queda, siguiente turno.
+    if (this.phase === 'echando' && this.poured && this.faucet.quiet) {
+      this.quietSince ??= this.time;
+      if (this.time - this.quietSince >= cfg.turnEndDelay) {
+        this.record(false);
+        this.turn = (this.turn + 1) % this.order.length;
+        this.phase = 'turno';
+      }
     }
   }
 
@@ -173,7 +195,8 @@ export class Game {
       player: this.current,
       poured: this.pouredThisTurn,
       volumeAfter: this.glass.volume,
-      duration: this.time - this.turnStartedAt,
+      hesitation: (this.pressStartedAt ?? this.time) - this.turnStartedAt,
+      held: this.releasedAt !== null ? this.lastHeld : this.time - (this.pressStartedAt ?? this.time),
       overflowed,
     });
   }

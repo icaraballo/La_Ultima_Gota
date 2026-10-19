@@ -32,6 +32,9 @@ export const config = {
   /** Lo que tarda el líquido en caer del grifo al vaso (s). */
   fallTime: 0.35,
 
+  /** Pausa tras caer lo echado antes de pasar al siguiente turno (s), para ver cómo queda. */
+  turnEndDelay: 0.8,
+
   /** Variación oculta del menisco en cada ronda: ±10 %. */
   meniscusVariance: 0.10,
   /** Desde qué llenado empieza la vibración de cercanía (fase 6). */

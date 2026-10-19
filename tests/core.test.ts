@@ -137,12 +137,12 @@ describe('menisco y desborde', () => {
   });
 });
 
-/** Juega pulsaciones: mantiene `s` segundos (0 = toque) y espera a que caiga todo. */
+/** Un turno: mantiene `s` segundos (0 = toque), suelta y espera a que acabe el turno. */
 function pour(g: Game, s: number) {
   g.press();
   for (let i = 0; i < Math.max(1, Math.round(s / DT)); i++) g.step(DT);
   g.release();
-  for (let i = 0; i < 300 && !g.faucet.quiet && g.phase === 'echando'; i++) g.step(DT);
+  for (let i = 0; i < 600 && g.phase === 'echando'; i++) g.step(DT);
 }
 
 describe('partida', () => {
@@ -152,24 +152,34 @@ describe('partida', () => {
     pour(g, 0.05);
     expect(g.glass.volume).toBeLessThan(config.dropVolume * 3 * 1.3 + 1e-9);
     const tras = g.glass.volume;
+    g.ready();
     pour(g, 1);
     expect(g.glass.volume - tras).toBeGreaterThan(config.dropVolume * 4);
   });
 
-  it('no se puede pasar sin echar ni con líquido en el aire', () => {
+  it('una sola pulsación por turno: al soltar y caer todo, pasa al siguiente', () => {
     const g = new Game(['Ana', 'Luis'], { seed: 1 });
     g.ready();
-    expect(g.canPass).toBe(false);
+    const antes = g.current;
     g.press();
     g.step(DT);
     g.release();
-    expect(g.canPass).toBe(false); // la gota aún cae
-    for (let i = 0; i < 60; i++) g.step(DT);
-    expect(g.canPass).toBe(true);
-    const antes = g.current;
-    g.pass();
+    expect(g.poured).toBe(true);
+    g.press(); // segunda pulsación: no cuenta
+    expect(g.pressing).toBe(false);
+    for (let i = 0; i < 20; i++) g.step(DT);
+    expect(g.phase).toBe('echando'); // la gota aún cae
+    for (let i = 0; i < Math.round((config.fallTime + config.turnEndDelay) / DT) + 30; i++) g.step(DT);
     expect(g.phase).toBe('turno');
     expect(g.current).not.toBe(antes);
+    expect(g.history).toHaveLength(1);
+  });
+
+  it('sin pulsar no se pasa de turno', () => {
+    const g = new Game(['Ana', 'Luis'], { seed: 1 });
+    g.ready();
+    for (let i = 0; i < 600; i++) g.step(DT);
+    expect(g.phase).toBe('echando');
   });
 
   it('quien desborda queda eliminado; con 2 jugadores es una sola ronda', () => {
@@ -183,6 +193,19 @@ describe('partida', () => {
     g.continue();
     expect(g.phase).toBe('fin');
     expect(g.winner).toBe(1 - quien);
+  });
+
+  it('si desborda lo que cae después de soltar, pierde quien echó', () => {
+    const g = new Game(['Ana', 'Luis'], { seed: 4 });
+    g.ready();
+    const quien = g.current;
+    // Mantener hasta casi el límite: la inercia y lo que está en el aire lo rematan.
+    g.press();
+    while (g.glass.volume + g.faucet.inAir.reduce((a, p) => a + p.volume, 0) < g.glass.limit) g.step(DT);
+    g.release();
+    for (let i = 0; i < 600 && g.phase === 'echando'; i++) g.step(DT);
+    expect(g.phase).toBe('desborde');
+    expect(g.loser).toBe(quien);
   });
 
   it('tras eliminar, ronda nueva con los que quedan, vaso vacío y orden sorteado', () => {
@@ -204,10 +227,7 @@ describe('partida', () => {
       for (let paso = 0; paso < 10000 && g.phase !== 'fin'; paso++) {
         if (g.phase === 'turno') g.ready();
         else if (g.phase === 'desborde') g.continue();
-        else {
-          pour(g, r.next() < 0.5 ? 0 : r.next() * 1.5);
-          if (g.phase === 'echando' && r.next() < 0.6) g.pass();
-        }
+        else pour(g, r.next() < 0.4 ? 0 : r.next() * 2);
       }
       return { winner: g.winner, turnos: g.history.length };
     };

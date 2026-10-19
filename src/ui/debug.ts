@@ -1,0 +1,189 @@
+import { config } from '../core/config';
+import type { Game } from '../core/game';
+import type { Barra2D } from '../render/barra-2d';
+
+// Modo depuración (§9.2): lecturas en directo y sliders sobre config.ts para ajustar el tacto
+// sin recompilar. Panel lateral plegable, nunca a pantalla completa. Los valores se guardan en
+// este navegador y «Copiar valores» los da en JSON para pasarlos a config.ts.
+// Textos solo en castellano a propósito: es una herramienta, no parte del juego.
+
+interface Param {
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  get(): number;
+  set(v: number): void;
+}
+
+const agua = config.liquids.agua;
+const top = <K extends keyof typeof config>(key: K, label: string, min: number, max: number, step: number): Param => ({
+  label, min, max, step,
+  get: () => config[key] as number,
+  set: v => { (config as Record<string, unknown>)[key] = v; },
+});
+const peso = (i: number, label: string): Param => ({
+  label, min: 0, max: 1, step: 0.01,
+  get: () => config.dropCountWeights[i],
+  set: v => { config.dropCountWeights[i] = v; },
+});
+
+const PARAMS: { grupo: string; params: Param[] }[] = [
+  { grupo: 'Gesto', params: [top('tapThresholdMs', 'Umbral toque/chorro (ms)', 60, 500, 10)] },
+  { grupo: 'Gotas', params: [
+    top('dropVolume', 'Volumen de gota', 0.001, 0.04, 0.0005),
+    top('dropVariance', 'Variación de gota (±)', 0, 0.8, 0.01),
+    peso(0, 'Peso 1 gota'), peso(1, 'Peso 2 gotas'), peso(2, 'Peso 3 gotas'),
+    top('dropInterval', 'Entre gotas (s)', 0.02, 0.3, 0.01),
+  ] },
+  { grupo: 'Chorro', params: [
+    top('flowMax', 'Caudal máx (vol/s)', 0.02, 0.4, 0.005),
+    top('flowRampTau', 'Arranque τ (s)', 0.05, 2, 0.05),
+    top('flowNoise', 'Fluctuación (±)', 0, 0.5, 0.01),
+    top('flowNoiseRate', 'Ritmo fluctuación (/s)', 0.2, 6, 0.1),
+    top('fallTime', 'Caída grifo→vaso (s)', 0.05, 1, 0.01),
+  ] },
+  { grupo: 'Agua', params: [
+    { label: 'Inercia al soltar (s)', min: 0, max: 0.8, step: 0.01, get: () => agua.inertia, set: v => { agua.inertia = v; } },
+    { label: 'Menisco (vol)', min: 0, max: 0.08, step: 0.001, get: () => agua.meniscus, set: v => { agua.meniscus = v; } },
+  ] },
+  { grupo: 'Ronda', params: [
+    top('meniscusVariance', 'Variación oculta (±)', 0, 0.5, 0.01),
+    top('turnEndDelay', 'Pausa al acabar turno (s)', 0, 2, 0.05),
+  ] },
+];
+const ALL = PARAMS.flatMap(g => g.params);
+
+const K_ACTIVO = 'ultima-gota:debug';
+const K_VALORES = 'ultima-gota:debug-config';
+const store = {
+  get(k: string) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k: string, v: string | null) {
+    try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* sin almacenamiento */ }
+  },
+};
+
+const fmt = (v: number, step: number) => {
+  const dec = Math.max(0, Math.ceil(-Math.log10(step)));
+  return v.toFixed(dec);
+};
+const pct = (v: number) => `${(v * 100).toFixed(1)} %`;
+
+export function createDebug(root: HTMLElement, barra: Barra2D) {
+  const defaults = ALL.map(p => p.get());
+  // Valores guardados de otra sesión.
+  try {
+    const saved = JSON.parse(store.get(K_VALORES) ?? 'null') as Record<string, number> | null;
+    if (saved) ALL.forEach(p => { if (typeof saved[p.label] === 'number') p.set(saved[p.label]); });
+  } catch { /* JSON roto: se ignora */ }
+
+  let active = new URLSearchParams(location.search).has('debug') || store.get(K_ACTIVO) === '1';
+
+  const el = document.createElement('div');
+  el.className = 'debug';
+  el.innerHTML = `
+    <div class="debug-mini" id="dbg-mini"></div>
+    <button class="debug-abrir" id="dbg-abrir" aria-label="Depuración">⚙</button>
+    <aside class="debug-panel" id="dbg-panel" hidden>
+      <div class="debug-cab"><strong>Depuración</strong><button id="dbg-cerrar">×</button></div>
+      <pre id="dbg-lecturas"></pre>
+      <label class="debug-check"><input type="checkbox" id="dbg-limite"> Ver el límite de la ronda</label>
+      ${PARAMS.map(g => `
+        <h3>${g.grupo}</h3>
+        ${g.params.map(p => {
+          const i = ALL.indexOf(p);
+          return `<label class="debug-param">
+            <span>${p.label} <b id="dbg-v${i}"></b></span>
+            <input type="range" data-i="${i}" min="${p.min}" max="${p.max}" step="${p.step}">
+          </label>`;
+        }).join('')}`).join('')}
+      <p class="debug-nota">El menisco y su variación se aplican en la ronda siguiente.</p>
+      <div class="debug-botones">
+        <button id="dbg-copiar">Copiar valores</button>
+        <button id="dbg-reset">Restablecer</button>
+      </div>
+      <p class="debug-nota" id="dbg-aviso"></p>
+    </aside>`;
+  root.appendChild(el);
+  const $ = (id: string) => el.querySelector('#' + id) as HTMLElement;
+  const panel = $('dbg-panel');
+
+  function syncSliders() {
+    ALL.forEach((p, i) => {
+      (el.querySelector(`input[data-i="${i}"]`) as HTMLInputElement).value = String(p.get());
+      $('dbg-v' + i).textContent = fmt(p.get(), p.step);
+    });
+  }
+  function save() {
+    const changed: Record<string, number> = {};
+    ALL.forEach((p, i) => { if (p.get() !== defaults[i]) changed[p.label] = p.get(); });
+    store.set(K_VALORES, Object.keys(changed).length ? JSON.stringify(changed) : null);
+  }
+  function render() {
+    el.hidden = !active;
+    barra.showLimit = active && ($('dbg-limite') as HTMLInputElement).checked;
+  }
+
+  el.addEventListener('input', e => {
+    const input = e.target as HTMLInputElement;
+    if (input.dataset.i === undefined) { render(); return; }
+    const i = +input.dataset.i;
+    ALL[i].set(+input.value);
+    $('dbg-v' + i).textContent = fmt(ALL[i].get(), ALL[i].step);
+    save();
+  });
+  $('dbg-abrir').addEventListener('click', () => { panel.hidden = !panel.hidden; });
+  $('dbg-cerrar').addEventListener('click', () => { panel.hidden = true; });
+  $('dbg-reset').addEventListener('click', () => {
+    ALL.forEach((p, i) => p.set(defaults[i]));
+    save();
+    syncSliders();
+  });
+  $('dbg-copiar').addEventListener('click', async () => {
+    const valores = {
+      ...Object.fromEntries((Object.keys(config) as (keyof typeof config)[])
+        .filter(k => typeof config[k] === 'number' || Array.isArray(config[k])).map(k => [k, config[k]])),
+      agua: { ...agua },
+    };
+    const txt = JSON.stringify(valores, null, 1);
+    try {
+      await navigator.clipboard.writeText(txt);
+      $('dbg-aviso').textContent = 'Copiado.';
+    } catch {
+      $('dbg-aviso').textContent = txt;
+    }
+  });
+
+  syncSliders();
+  render();
+
+  let lastText = 0;
+  return {
+    toggle() {
+      active = !active;
+      store.set(K_ACTIVO, active ? '1' : null);
+      render();
+    },
+    update(game: Game) {
+      if (!active) return;
+      const now = performance.now();
+      if (now - lastText < 100) return;
+      lastText = now;
+      const { glass, faucet } = game;
+      const aire = faucet.inAir.reduce((s, p) => s + p.volume, 0);
+      const ultimo = game.history[game.history.length - 1];
+      $('dbg-mini').textContent = `${pct(glass.volume)} / ${pct(glass.limit)}`;
+      $('dbg-lecturas').textContent = [
+        `ronda ${game.round} · fase ${game.phase}`,
+        `volumen   ${pct(glass.volume)}`,
+        `altura    ${pct(glass.height)}`,
+        `límite    ${pct(glass.limit)} (margen ${pct(glass.margin)})`,
+        `peligro   ${pct(glass.danger)}`,
+        `caudal    ${faucet.flow.toFixed(3)} vol/s`,
+        `en el aire ${pct(aire)}`,
+        `pulsación ${Math.round((game.pressing ? 0 : game.lastHeld) * 1000)} ms`,
+        ultimo ? `último turno: ${pct(ultimo.poured)} · dudó ${ultimo.hesitation.toFixed(1)} s` : '',
+      ].join('\n');
+    },
+  };
+}

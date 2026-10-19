@@ -10,6 +10,8 @@ const CRISTAL = 'rgba(244, 239, 230, .7)';
 const MENISCO_VISIBLE = 3;
 
 export class Barra2D {
+  /** Modo depuración: dibuja el límite oculto de la ronda. */
+  showLimit = false;
   private overflowSince: number | null = null;
   private lastGlass: unknown = null;
 
@@ -115,6 +117,18 @@ export class Barra2D {
     ctx.lineTo(right, mesaY);
     ctx.lineTo(right, rimY);
     ctx.stroke();
+
+    if (this.showLimit) {
+      const limitY = rimY - (glass.vessel.volumeToHeight(glass.limit) - 1) * gh * MENISCO_VISIBLE;
+      ctx.strokeStyle = '#e8735f';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 5]);
+      ctx.beginPath();
+      ctx.moveTo(left - 24, limitY);
+      ctx.lineTo(right + 24, limitY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
 
     // Grifo.
     ctx.fillStyle = '#b9c2cc';

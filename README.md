@@ -5,12 +5,13 @@
 ### ▶ [Jugar](https://icaraballo.github.io/La_Ultima_Gota/)
 
 Juego móvil por turnos para jugar en grupo con un solo móvil, que va pasando de mano en mano.
-Cada uno echa el líquido que quiera —una gota con un toque, un chorro manteniendo pulsado— y
-pulsa «Paso». Nunca se controla del todo cuánto cae, no hay números en pantalla y el vaso
+Cada uno echa una vez por turno —una gota con un toque, un chorro manteniendo pulsado— y al
+soltar le toca al siguiente. Nunca se controla del todo cuánto cae, no hay números en pantalla y el vaso
 aguanta un poco por encima del borde… pero nadie sabe cuánto.
 
-> **En desarrollo.** Fase 1 de 7: ya se juega de principio a fin con un vaso provisional en 2D
-> (agua y vaso cilíndrico). Lo siguiente es afinar el tacto de echar; el 3D llega después.
+> **En desarrollo.** Fase 2 de 7: se juega de principio a fin con un vaso provisional en 2D
+> (agua y vaso cilíndrico) y ahora se afina el tacto de echar con el modo depuración
+> ([`?debug`](https://icaraballo.github.io/La_Ultima_Gota/?debug)). El 3D llega después.
 
 ## Desarrollo
 

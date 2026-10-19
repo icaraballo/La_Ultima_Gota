@@ -13,6 +13,14 @@ export interface Liquid {
   meniscus: number;
 }
 
+/** Vista viva de los parámetros: si el modo depuración cambia config, se nota al momento
+ * (el margen del menisco, en la ronda siguiente, porque se sortea al empezarla). */
 export function getLiquid(id: LiquidId): Liquid {
-  return { id, ...config.liquids[id] };
+  const p = config.liquids[id];
+  return {
+    id,
+    get flowMul() { return p.flowMul; },
+    get inertia() { return p.inertia; },
+    get meniscus() { return p.meniscus; },
+  };
 }

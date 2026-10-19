@@ -2,7 +2,29 @@
 // un fichero hermano (en.ts) con las mismas claves.
 export const es = {
   titulo: 'La Última Gota',
+  lema: 'Entre todos llenáis un vaso. Quien lo desborda, pierde.',
   version: (v: string) => `v${v}`,
+
+  jugadores: 'Jugadores',
+  jugadorN: (n: number) => `Jugador ${n}`,
+  anadirJugador: '+ Añadir jugador',
+  quitarJugador: 'Quitar',
+  empezar: 'Empezar',
+
+  turnoDe: (nombre: string) => `Turno de ${nombre}`,
+  pasaElMovil: 'Pásale el móvil',
+  listo: '¡Listo!',
+  despues: (nombre: string) => `Después: ${nombre}`,
+  zonaEchar: 'Toca: gota · Mantén: chorro',
+  paso: 'Paso',
+
+  eliminado: (nombre: string) => `${nombre} ha dejado caer la última gota`,
+  quedan: (n: number) => `Quedan ${n}`,
+  siguienteRonda: 'Siguiente ronda',
+  verGanador: 'Ver ganador',
+  gana: (nombre: string) => `¡Gana ${nombre}!`,
+  revancha: 'Revancha',
+  cambiarJugadores: 'Cambiar jugadores',
 };
 
 export type Textos = typeof es;

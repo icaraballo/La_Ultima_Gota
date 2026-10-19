@@ -9,8 +9,8 @@ Cada uno echa el líquido que quiera —una gota con un toque, un chorro manteni
 pulsa «Paso». Nunca se controla del todo cuánto cae, no hay números en pantalla y el vaso
 aguanta un poco por encima del borde… pero nadie sabe cuánto.
 
-> **En desarrollo.** Fase 0 de 7: el esqueleto (Vite, TypeScript, Three.js y Vitest) con una
-> escena vacía. Lo siguiente es el núcleo lógico, jugable con una barra 2D provisional.
+> **En desarrollo.** Fase 1 de 7: ya se juega de principio a fin con un vaso provisional en 2D
+> (agua y vaso cilíndrico). Lo siguiente es afinar el tacto de echar; el 3D llega después.
 
 ## Desarrollo
 

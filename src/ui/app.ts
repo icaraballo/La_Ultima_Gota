@@ -1,0 +1,166 @@
+import { config } from '../core/config';
+import { Game, type Phase } from '../core/game';
+import { t } from '../i18n';
+import { Barra2D } from '../render/barra-2d';
+
+// Pantallas mínimas de la fase 1: jugadores, «Turno de X», el vaso, eliminado y ganador.
+// El flujo completo (opciones, resumen, cómo jugar, ajustes) es la fase 4.
+
+const DT = 1 / config.stepsPerSecond;
+
+const esc = (s: string) =>
+  s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+
+export function startApp(root: HTMLElement) {
+  let names: string[] = ['', ''];
+  let game: Game | null = null;
+  let shownPhase: Phase | null = null;
+
+  root.innerHTML = `
+    <section class="pantalla" id="p-jugadores"></section>
+    <section class="pantalla juego" id="p-juego" hidden>
+      <header class="cabecera">
+        <div class="turno" id="j-turno"></div>
+        <div class="despues" id="j-despues"></div>
+      </header>
+      <canvas id="j-vaso"></canvas>
+      <footer class="controles">
+        <button class="zona" id="j-zona">${t.zonaEchar}</button>
+        <button class="boton paso" id="j-paso" disabled>${t.paso}</button>
+      </footer>
+      <div class="capa" id="j-capa" hidden></div>
+    </section>
+    <div class="version">${t.version(__VERSION__)}</div>
+  `;
+  const $ = (id: string) => document.getElementById(id)!;
+  const pJugadores = $('p-jugadores'), pJuego = $('p-juego'), capa = $('j-capa');
+  const paso = $('j-paso') as HTMLButtonElement;
+  const zona = $('j-zona');
+  const barra = new Barra2D($('j-vaso') as HTMLCanvasElement);
+
+  // ── Jugadores ──────────────────────────────────────────────
+  function showPlayers() {
+    game = null;
+    pJuego.hidden = true;
+    pJugadores.hidden = false;
+    pJugadores.innerHTML = `
+      <h1 class="logo">${t.titulo}</h1>
+      <p class="lema">${t.lema}</p>
+      <h2>${t.jugadores}</h2>
+      <ol class="lista">
+        ${names.map((n, i) => `
+          <li>
+            <input data-i="${i}" maxlength="16" placeholder="${t.jugadorN(i + 1)}" value="${esc(n)}">
+            ${names.length > config.minPlayers ? `<button class="quitar" data-quitar="${i}" aria-label="${t.quitarJugador}">×</button>` : ''}
+          </li>`).join('')}
+      </ol>
+      ${names.length < config.maxPlayers ? `<button class="boton secundario" id="anadir">${t.anadirJugador}</button>` : ''}
+      <button class="boton" id="empezar">${t.empezar}</button>
+    `;
+  }
+  pJugadores.addEventListener('input', e => {
+    const el = e.target as HTMLInputElement;
+    if (el.dataset.i) names[+el.dataset.i] = el.value;
+  });
+  pJugadores.addEventListener('click', e => {
+    const el = (e.target as HTMLElement).closest('button');
+    if (!el) return;
+    if (el.dataset.quitar) {
+      names.splice(+el.dataset.quitar, 1);
+      showPlayers();
+    } else if (el.id === 'anadir') {
+      names.push('');
+      showPlayers();
+      (pJugadores.querySelector(`input[data-i="${names.length - 1}"]`) as HTMLInputElement)?.focus();
+    } else if (el.id === 'empezar') {
+      start();
+    }
+  });
+
+  function start() {
+    const finalNames = names.map((n, i) => n.trim() || t.jugadorN(i + 1));
+    game = new Game(finalNames, { seed: (Math.random() * 2 ** 32) >>> 0 });
+    shownPhase = null;
+    pJugadores.hidden = true;
+    pJuego.hidden = false;
+  }
+
+  // ── Juego ──────────────────────────────────────────────────
+  const press = (e: PointerEvent) => {
+    e.preventDefault();
+    zona.setPointerCapture(e.pointerId);
+    zona.classList.add('pulsada');
+    game?.press();
+  };
+  const release = () => {
+    zona.classList.remove('pulsada');
+    game?.release();
+  };
+  zona.addEventListener('pointerdown', press);
+  zona.addEventListener('pointerup', release);
+  zona.addEventListener('pointercancel', release);
+  zona.addEventListener('contextmenu', e => e.preventDefault());
+  paso.addEventListener('click', () => game?.pass());
+
+  capa.addEventListener('click', e => {
+    const el = (e.target as HTMLElement).closest('button');
+    if (!el || !game) return;
+    if (el.id === 'listo') game.ready();
+    else if (el.id === 'seguir') game.continue();
+    else if (el.id === 'revancha') start();
+    else if (el.id === 'jugadores') showPlayers();
+  });
+
+  function showPhase(g: Game) {
+    const nombre = (i: number) => esc(g.players[i].name);
+    $('j-turno').textContent = g.phase === 'echando' ? t.turnoDe(g.players[g.current].name) : '';
+    $('j-despues').textContent = g.phase === 'echando' ? t.despues(g.players[g.next].name) : '';
+    capa.hidden = g.phase === 'echando';
+    capa.className = 'capa ' + g.phase;
+    if (g.phase === 'turno') {
+      capa.innerHTML = `
+        <p class="pequeno">${t.pasaElMovil}</p>
+        <h1 class="grande">${t.turnoDe(nombre(g.current))}</h1>
+        <button class="boton" id="listo">${t.listo}</button>`;
+    } else if (g.phase === 'desborde') {
+      const quedan = g.alive.length;
+      capa.innerHTML = `
+        <div class="tarjeta">
+          <h2>${t.eliminado(nombre(g.loser!))}</h2>
+          ${quedan > 1 ? `<p>${t.quedan(quedan)}</p>` : ''}
+          <button class="boton" id="seguir">${quedan > 1 ? t.siguienteRonda : t.verGanador}</button>
+        </div>`;
+    } else if (g.phase === 'fin') {
+      capa.innerHTML = `
+        <h1 class="grande">${t.gana(nombre(g.winner!))}</h1>
+        <button class="boton" id="revancha">${t.revancha}</button>
+        <button class="boton secundario" id="jugadores">${t.cambiarJugadores}</button>`;
+    }
+  }
+
+  // ── Bucle: lógica a paso fijo, dibujo a lo que dé la pantalla ──
+  let last = performance.now();
+  let acc = 0;
+  function frame(nowMs: number) {
+    acc += Math.min(0.25, (nowMs - last) / 1000);
+    last = nowMs;
+    if (game) {
+      while (acc >= DT) {
+        game.step(DT);
+        acc -= DT;
+      }
+      if (game.phase !== shownPhase) {
+        shownPhase = game.phase;
+        showPhase(game);
+      }
+      paso.disabled = !game.canPass;
+      barra.draw(game, nowMs / 1000);
+    } else {
+      acc = 0;
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  showPlayers();
+}

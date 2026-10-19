@@ -1,10 +1,3 @@
-import { crearEscena } from './render/scene';
-import { t } from './i18n';
+import { startApp } from './ui/app';
 
-crearEscena(document.getElementById('escena') as HTMLCanvasElement);
-
-const ui = document.getElementById('ui')!;
-ui.innerHTML = `
-  <h1 class="titulo">${t.titulo}</h1>
-  <div class="version">${t.version(__VERSION__)}</div>
-`;
+startApp(document.getElementById('app')!);

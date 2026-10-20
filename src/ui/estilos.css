@@ -18,12 +18,32 @@ html, body {
 }
 
 #app { position: fixed; inset: 0; }
+
+/* Zonas seguras (notch, barra de inicio) vistas desde la interfaz: arriba y abajo del móvil. */
+:root { --sa-arriba: env(safe-area-inset-top); --sa-abajo: env(safe-area-inset-bottom); }
+
+/* Móvil tumbado (ui/orientacion.ts): la interfaz se contrarrota y sigue en vertical respecto al
+   móvil. Con 90 la parte de arriba del móvil queda a la izquierda de la pantalla; con 270, a la
+   derecha. Los fixed de dentro (hoja ⓘ, depuración, versión) giran con #app. */
+:root[data-giro] #app {
+  inset: auto; top: 50%; left: 50%;
+  width: 100dvh; height: 100dvw;
+}
+:root[data-giro="90"] {
+  --sa-arriba: env(safe-area-inset-left); --sa-abajo: env(safe-area-inset-right);
+}
+:root[data-giro="90"] #app { transform: translate(-50%, -50%) rotate(-90deg); }
+:root[data-giro="270"] {
+  --sa-arriba: env(safe-area-inset-right); --sa-abajo: env(safe-area-inset-left);
+}
+:root[data-giro="270"] #app { transform: translate(-50%, -50%) rotate(90deg); }
+
 [hidden] { display: none !important; }
 button { font-family: inherit; color: inherit; cursor: pointer; }
 
 .pantalla {
   position: absolute; inset: 0;
-  padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom));
+  padding: max(20px, var(--sa-arriba)) 16px max(20px, var(--sa-abajo));
   overflow-y: auto;
   display: flex; flex-direction: column; gap: 10px;
 }
@@ -32,13 +52,13 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 #p-jugadores { padding: 0; gap: 0; overflow: hidden; }
 .desplazable {
   flex: 1; min-height: 0; overflow-y: auto; position: relative;
-  padding: max(20px, env(safe-area-inset-top)) 16px 8px;
+  padding: max(20px, var(--sa-arriba)) 16px 8px;
   display: flex; flex-direction: column; gap: 10px;
 }
-.pie { flex: none; padding: 8px 16px max(18px, env(safe-area-inset-bottom)); }
+.pie { flex: none; padding: 8px 16px max(18px, var(--sa-abajo)); }
 .pie .boton { width: 100%; }
 .esquinas {
-  position: absolute; left: 12px; right: 12px; top: max(12px, env(safe-area-inset-top));
+  position: absolute; left: 12px; right: 12px; top: max(12px, var(--sa-arriba));
   display: flex; justify-content: space-between; pointer-events: none;
 }
 .esquinas > * { pointer-events: auto; }
@@ -132,7 +152,7 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
   padding: 24px 16px; text-align: center;
 }
 .capa.turno, .capa.fin { background: var(--fondo); }
-.capa.desborde { background: transparent; justify-content: flex-end; padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+.capa.desborde { background: transparent; justify-content: flex-end; padding-bottom: max(24px, var(--sa-abajo)); }
 .capa .boton { min-width: 220px; }
 .grande { font-size: 36px; font-weight: 700; line-height: 1.15; max-width: 100%; overflow-wrap: anywhere; }
 .grande .punto { width: 18px; height: 18px; border: 2px solid var(--tinta); margin-right: 12px; vertical-align: middle; }
@@ -163,7 +183,7 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
 .hoja-cab h2 { margin: 0; font-size: 22px; }
 .hoja-cab .redondo { font-size: 26px; line-height: 1; }
 .hoja-cuerpo {
-  overflow-y: auto; padding: 4px 16px max(20px, env(safe-area-inset-bottom));
+  overflow-y: auto; padding: 4px 16px max(20px, var(--sa-abajo));
   display: flex; flex-direction: column; gap: 8px;
 }
 .hoja-cuerpo h3 { font-size: 15px; font-weight: 600; color: var(--suave); margin-top: 6px; text-transform: uppercase; letter-spacing: .05em; }
@@ -178,24 +198,24 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
 .hoja-pie { color: var(--suave); font-style: italic; text-align: center; padding: 6px 8px 0; }
 
 .version {
-  position: fixed; right: 10px; bottom: max(4px, env(safe-area-inset-bottom));
+  position: fixed; right: 10px; bottom: max(4px, var(--sa-abajo));
   font-size: 11px; color: var(--suave); pointer-events: none; z-index: 3;
 }
 
 /* ── Modo depuración (herramienta: colores propios, oscuros) ── */
 .debug { position: fixed; inset: 0; pointer-events: none; z-index: 10; font-size: 13px; font-family: system-ui, sans-serif; color: #f4efe6; }
 .debug-mini {
-  position: absolute; left: 8px; top: max(6px, env(safe-area-inset-top));
+  position: absolute; left: 8px; top: max(6px, var(--sa-arriba));
   font: 12px ui-monospace, Menlo, monospace; color: #e8735f;
 }
 .debug-abrir {
-  position: absolute; left: 8px; top: calc(max(12px, env(safe-area-inset-top)) + 54px); pointer-events: auto;
+  position: absolute; left: 8px; top: calc(max(12px, var(--sa-arriba)) + 54px); pointer-events: auto;
   width: 36px; height: 36px; border-radius: 10px; border: 0; font-size: 20px;
   background: rgba(38, 55, 74, .9); color: #f4efe6;
 }
 .debug-panel {
   position: absolute; right: 0; top: 0; bottom: 0; width: min(300px, 86vw); pointer-events: auto;
-  overflow-y: auto; padding: max(10px, env(safe-area-inset-top)) 12px 24px;
+  overflow-y: auto; padding: max(10px, var(--sa-arriba)) 12px 24px;
   background: rgba(20, 30, 42, .94); box-shadow: -6px 0 24px rgba(0, 0, 0, .4);
   display: flex; flex-direction: column; gap: 8px;
 }

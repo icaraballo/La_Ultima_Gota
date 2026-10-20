@@ -11,6 +11,7 @@ import { aplicarTemas, guardarTema, LIQUIDOS, SOLIDOS, temaGuardado, type TemaId
 import { createDebug } from './debug';
 import { esc } from './html';
 import { iconos } from './iconos';
+import { mantenerVertical } from './orientacion';
 import { MAX_NOMBRE, sanearPreparacion, type Preparacion } from './preparacion';
 
 // Pantallas: jugadores (con vaso y líquido, y la hoja ⓘ), «Turno de X», el vaso, eliminado y
@@ -37,6 +38,7 @@ const puntoContenido = (id: ContentId) =>
 const punto = (i: number) => `<span class="punto" style="background:var(--punto-${i % 10})"></span>`;
 
 export function startApp(root: HTMLElement) {
+  mantenerVertical();
   let tema: TemaId = temaGuardado();
   aplicarTemas(tema);
   const prep = loadPrep();

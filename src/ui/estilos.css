@@ -1,6 +1,10 @@
 /* Los colores salen de src/render/temas.ts: aplicarTemas() define las variables en
    :root[data-tema="noche|dia"]. Aquí solo la forma. */
 
+/* Fredoka alojada con el juego (pesos 300–700 en un solo fichero variable): sin peticiones a
+   Google y también sin conexión en la APK. */
+@import '@fontsource-variable/fredoka';
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
@@ -8,7 +12,7 @@ html, body {
   overflow: hidden;
   background: var(--fondo);
   color: var(--texto);
-  font-family: 'Fredoka', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-family: 'Fredoka Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior: none;
 }

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-5 0 54 54">
+  <!-- La gota del título (iconos.gotaTitulo en src/ui/iconos.ts) con los colores del tema noche
+       de src/render/temas.ts escritos tal cual (un SVG suelto no ve las variables CSS):
+       acento #F2A93B, tinta #140B08, acentoTexto #2B1B17. Si cambian allí, cámbialos aquí. -->
+  <path d="M22 3 C30 16 40 26 40 36 C40 46 32 52 22 52 C12 52 4 46 4 36 C4 26 14 16 22 3 Z" fill="#F2A93B" stroke="#140B08" stroke-width="3"/>
+  <path d="M13 34 C13 40 17 44 22 45" fill="none" stroke="#2B1B17" stroke-opacity=".35" stroke-width="3" stroke-linecap="round"/>
+</svg>

@@ -22,6 +22,7 @@ npm install      # .npmrc lleva legacy-peer-deps por un fallo de npm con los pee
 npm run dev      # servidor en la red local: ábrelo desde el móvil con la IP del Mac
 npm test         # Vitest
 npm run build    # comprueba tipos y compila a dist/
+npm run comprobar  # dist/ lleva licencias, CSP, vista previa del enlace y la versión buena
 ```
 
 Cada push a `main` se publica solo en GitHub Pages (`.github/workflows/pages.yml`).
@@ -33,11 +34,11 @@ src/
 ├─ core/      lógica pura: física del líquido, vasos, turnos. Sin DOM ni Three.js
 ├─ render/    la escena 3D (Three.js), los temas noche/día y el vaso 2D provisional (?2d)
 ├─ ui/        pantallas y botones, en HTML/CSS por encima del canvas
-├─ audio/     Web Audio
-├─ haptics/   vibración
+├─ audio/     sonido (fase 6, aún vacío)
+├─ haptics/   vibración (fase 6, aún vacío)
 ├─ i18n/      todos los textos (castellano; inglés más adelante)
 └─ main.ts
-tools/        simulador de partidas con bots (Node)
+tools/        simulador con bots (fase 5, aún vacío) y la comprobación de la build
 tests/        Vitest
 ```
 
@@ -45,6 +46,18 @@ La regla más importante: **`core/` no sabe nada de Three.js ni del DOM** (lo vi
 `tests/arquitectura.test.ts`). Todo número de jugabilidad va en `core/config.ts` y todo
 azar sale de un generador con semilla, para poder repetir partidas.
 
+## Privacidad
+
+No hay cuentas, cookies ni analítica, y el juego no hace peticiones a terceros. Guarda en
+tu navegador los nombres de la última partida y el tema elegido; nada sale de tu móvil.
+
+## Seguridad
+
+Ver [SECURITY.md](SECURITY.md).
+
 ## Licencia
 
-Código bajo [MIT](LICENSE).
+Código bajo [MIT](LICENSE). Incluye [Three.js](https://threejs.org) y
+[Matter.js](https://brm.io/matter-js/) (MIT) y la letra Fredoka (SIL Open Font License
+1.1). Las licencias completas se publican con el juego en
+[licencias.txt](https://icaraballo.github.io/La_Ultima_Gota/licencias.txt).

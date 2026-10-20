@@ -1,0 +1,8 @@
+# Solo las acciones del workflow (mantiene al día los commits fijados). Para npm valen las
+# alertas de seguridad del repositorio: las actualizaciones de versión romperían las fijadas.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

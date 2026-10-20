@@ -1,3 +1,16 @@
 .DS_Store
+Thumbs.db
 node_modules/
 dist/
+.vite/
+coverage/
+*.log
+*.local
+.env
+.env.*
+.claude/settings.local.json
+# Claves de firmar la APK (fase 7) y certificados: nunca al repo.
+*.keystore
+*.jks
+*.p12
+*.pem

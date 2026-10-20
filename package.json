@@ -1,12 +1,20 @@
 {
   "name": "la-ultima-gota",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.7.1",
   "type": "module",
   "description": "Juego móvil por turnos: entre todos llenáis un vaso. Quien lo desborda, pierde.",
+  "license": "MIT",
+  "author": "Iñigo Caraballo",
+  "homepage": "https://icaraballo.github.io/La_Ultima_Gota/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/icaraballo/La_Ultima_Gota.git"
+  },
   "scripts": {
     "dev": "vite --host",
     "build": "tsc --noEmit && vite build",
+    "comprobar": "node tools/comprobar-dist.mjs",
     "preview": "vite preview --host",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

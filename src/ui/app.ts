@@ -3,13 +3,15 @@ import { Game, type GameOptions, type Phase } from '../core/game';
 import { CONTENT_IDS, isSolid, type ContentId } from '../core/contents';
 import { LIQUID_IDS } from '../core/liquids';
 import { SOLID_IDS } from '../core/solids';
-import { VESSEL_IDS, type VesselId } from '../core/vessels';
+import { VESSEL_IDS } from '../core/vessels';
 import { t } from '../i18n';
 import { Barra2D } from '../render/barra-2d';
 import { Escena3D } from '../render/escena-3d';
 import { aplicarTemas, guardarTema, LIQUIDOS, SOLIDOS, temaGuardado, type TemaId } from '../render/temas';
 import { createDebug } from './debug';
+import { esc } from './html';
 import { iconos } from './iconos';
+import { MAX_NOMBRE, sanearPreparacion, type Preparacion } from './preparacion';
 
 // Pantallas: jugadores (con vaso y líquido, y la hoja ⓘ), «Turno de X», el vaso, eliminado y
 // ganador.
@@ -17,28 +19,11 @@ import { iconos } from './iconos';
 
 const DT = 1 / config.stepsPerSecond;
 
-const esc = (s: string) =>
-  s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-
 const K_PARTIDA = 'ultima-gota:partida';
-interface Preparacion {
-  names: string[];
-  vessel: VesselId | 'aleatorio';
-  /** Qué se echa: un líquido, canicas o monedas (se guarda como «liquid» desde la v0.4.0). */
-  liquid: ContentId | 'aleatorio';
-  /** «Empezar en orden aleatorio»: se baraja una vez al crear la partida. */
-  randomOrder: boolean;
-}
 function loadPrep(): Preparacion {
-  const base: Preparacion = { names: ['', ''], vessel: 'cilindro', liquid: 'agua', randomOrder: false };
-  try {
-    const saved = JSON.parse(localStorage.getItem(K_PARTIDA) ?? 'null');
-    if (saved && Array.isArray(saved.names)) {
-      const { names, vessel, liquid, randomOrder } = { ...base, ...saved } as Preparacion;
-      return { names: names.slice(0, config.maxPlayers), vessel, liquid, randomOrder };
-    }
-  } catch { /* sin almacenamiento */ }
-  return base;
+  let saved: unknown = null;
+  try { saved = JSON.parse(localStorage.getItem(K_PARTIDA) ?? 'null'); } catch { /* sin almacenamiento o JSON roto */ }
+  return sanearPreparacion(saved);
 }
 function savePrep(p: Preparacion) {
   try { localStorage.setItem(K_PARTIDA, JSON.stringify(p)); } catch { /* sin almacenamiento */ }
@@ -78,9 +63,17 @@ export function startApp(root: HTMLElement) {
   const $ = (id: string) => document.getElementById(id)!;
   const pJugadores = $('p-jugadores'), pJuego = $('p-juego'), capa = $('j-capa');
   const zona = $('j-zona');
-  // 3D por defecto; ?2d vuelve al vaso plano de la fase 1 (útil para afinar el tacto).
+  // 3D por defecto; ?2d vuelve al vaso plano de la fase 1 (útil para afinar el tacto). Sin
+  // WebGL 2, Three.js no arranca: se juega con el vaso plano, que es jugable entero.
   const canvas = $('j-vaso') as HTMLCanvasElement;
-  const vista = new URLSearchParams(location.search).has('2d') ? new Barra2D(canvas) : new Escena3D(canvas);
+  let vista: Escena3D | Barra2D;
+  if (new URLSearchParams(location.search).has('2d')) vista = new Barra2D(canvas);
+  else {
+    try { vista = new Escena3D(canvas); } catch (e) {
+      console.warn('Sin WebGL: se usa el vaso 2D.', e);
+      vista = new Barra2D(canvas);
+    }
+  }
   vista.setTema(tema);
   const debug = createDebug(root, vista);
 
@@ -126,7 +119,7 @@ export function startApp(root: HTMLElement) {
         ${names.map((n, i) => `
           <li class="campo">
             ${punto(i)}
-            <input data-i="${i}" maxlength="16" aria-label="${t.jugadorN(i + 1)}" placeholder="${t.jugadorN(i + 1)}" value="${esc(n)}">
+            <input data-i="${i}" maxlength="${MAX_NOMBRE}" aria-label="${t.jugadorN(i + 1)}" placeholder="${t.jugadorN(i + 1)}" value="${esc(n)}">
             ${names.length > config.minPlayers ? `<button class="quitar" data-quitar="${i}" aria-label="${t.quitarJugador}">×</button>` : ''}
           </li>`).join('')}
       </ol>
@@ -248,6 +241,12 @@ export function startApp(root: HTMLElement) {
   zona.addEventListener('pointerup', release);
   zona.addEventListener('pointercancel', release);
   zona.addEventListener('contextmenu', e => e.preventDefault());
+  // Salir a otra app con el dedo puesto no siempre manda pointerup ni pointercancel: sin esto,
+  // al volver el chorro seguía abierto y el turno no acababa (UB-05).
+  const soltarSiPulsa = () => { if (game?.pressing) release(); };
+  document.addEventListener('visibilitychange', () => { if (document.hidden) soltarSiPulsa(); });
+  window.addEventListener('pagehide', soltarSiPulsa);
+  window.addEventListener('blur', soltarSiPulsa);
 
   // Modo depuración: ?debug en la URL o mantener pulsado el título 1 s.
   let logoTimer = 0;
@@ -309,25 +308,34 @@ export function startApp(root: HTMLElement) {
   // ── Bucle: lógica a paso fijo, dibujo a lo que dé la pantalla ──
   let last = performance.now();
   let acc = 0;
+  let errorVisto = false;
   function frame(nowMs: number) {
-    acc += Math.min(0.25, (nowMs - last) / 1000);
-    last = nowMs;
-    if (game) {
-      while (acc >= DT) {
-        game.step(DT);
-        acc -= DT;
+    try {
+      acc += Math.min(0.25, (nowMs - last) / 1000);
+      last = nowMs;
+      if (game) {
+        while (acc >= DT) {
+          game.step(DT);
+          acc -= DT;
+        }
+        if (game.phase !== shownPhase) {
+          shownPhase = game.phase;
+          showPhase(game);
+        }
+        setZona(game.poured);
+        vista.draw(game, nowMs / 1000);
+        debug.update(game);
+      } else {
+        acc = 0;
       }
-      if (game.phase !== shownPhase) {
-        shownPhase = game.phase;
-        showPhase(game);
-      }
-      setZona(game.poured);
-      vista.draw(game, nowMs / 1000);
-      debug.update(game);
-    } else {
-      acc = 0;
+    } catch (e) {
+      // Un fallo en un frame no puede congelar el juego: se apunta una vez y se sigue.
+      if (!errorVisto) console.error(e);
+      errorVisto = true;
+      acc = 0; // si el fallo fue en step(), que no se acumule tiempo sin consumir
+    } finally {
+      requestAnimationFrame(frame);
     }
-    requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 

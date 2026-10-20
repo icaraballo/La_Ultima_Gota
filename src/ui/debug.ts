@@ -9,9 +9,11 @@ interface Vista {
 // Modo depuración (§9.2): lecturas en directo y sliders sobre config.ts para ajustar el tacto
 // sin recompilar. Panel lateral plegable, nunca a pantalla completa. Los valores se guardan en
 // este navegador y «Copiar valores» los da en JSON para pasarlos a config.ts.
+// Solo dura la visita (?debug o mantener el título 1 s) y los sliders solo cuentan con el panel
+// encendido: apagado, el juego es exactamente el de config.ts.
 // Textos solo en castellano a propósito: es una herramienta, no parte del juego.
 
-interface Param {
+export interface Param {
   label: string;
   min: number;
   max: number;
@@ -81,6 +83,7 @@ const PARAMS: { grupo: string; params: Param[] }[] = [
 ];
 const ALL = PARAMS.flatMap(g => g.params);
 
+/** Hasta la v0.7.0 la depuración se recordaba encendida: ya no se escribe y se borra al cargar. */
 const K_ACTIVO = 'ultima-gota:debug';
 const K_VALORES = 'ultima-gota:debug-config';
 const store = {
@@ -96,15 +99,27 @@ const fmt = (v: number, step: number) => {
 };
 const pct = (v: number) => `${(v * 100).toFixed(1)} %`;
 
+/** Valores guardados que se pueden aplicar: solo números finitos de etiquetas que existen,
+ * recortados al rango de su slider. Lo demás se ignora. */
+export function sanearValores(guardados: unknown, params: readonly Pick<Param, 'label' | 'min' | 'max'>[]): Record<string, number> {
+  const valores: Record<string, number> = {};
+  if (!guardados || typeof guardados !== 'object' || Array.isArray(guardados)) return valores;
+  for (const p of params) {
+    const v = (guardados as Record<string, unknown>)[p.label];
+    if (typeof v === 'number' && Number.isFinite(v)) valores[p.label] = Math.min(p.max, Math.max(p.min, v));
+  }
+  return valores;
+}
+
 export function createDebug(root: HTMLElement, barra: Vista) {
   const defaults = ALL.map(p => p.get());
-  // Valores guardados de otra sesión.
-  try {
-    const saved = JSON.parse(store.get(K_VALORES) ?? 'null') as Record<string, number> | null;
-    if (saved) ALL.forEach(p => { if (typeof saved[p.label] === 'number') p.set(saved[p.label]); });
-  } catch { /* JSON roto: se ignora */ }
+  // Valores guardados de otra sesión (JSON roto: como si no hubiera).
+  const guardados = () => {
+    try { return sanearValores(JSON.parse(store.get(K_VALORES) ?? 'null'), ALL); } catch { return {}; }
+  };
 
-  let active = new URLSearchParams(location.search).has('debug') || store.get(K_ACTIVO) === '1';
+  store.set(K_ACTIVO, null);
+  let active = new URLSearchParams(location.search).has('debug');
 
   const el = document.createElement('div');
   el.className = 'debug';
@@ -146,6 +161,12 @@ export function createDebug(root: HTMLElement, barra: Vista) {
     ALL.forEach((p, i) => { if (p.get() !== defaults[i]) changed[p.label] = p.get(); });
     store.set(K_VALORES, Object.keys(changed).length ? JSON.stringify(changed) : null);
   }
+  /** Encendida, los valores guardados; apagada, los de serie. */
+  function aplicar() {
+    const valores = active ? guardados() : {};
+    ALL.forEach((p, i) => p.set(valores[p.label] ?? defaults[i]));
+    syncSliders();
+  }
   function render() {
     el.hidden = !active;
     barra.showLimit = active && ($('dbg-limite') as HTMLInputElement).checked;
@@ -182,14 +203,14 @@ export function createDebug(root: HTMLElement, barra: Vista) {
     }
   });
 
-  syncSliders();
+  aplicar();
   render();
 
   let lastText = 0;
   return {
     toggle() {
       active = !active;
-      store.set(K_ACTIVO, active ? '1' : null);
+      aplicar();
       render();
     },
     update(game: Game) {

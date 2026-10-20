@@ -56,10 +56,13 @@ export const config = {
    * motor (el vaso mide 250 de alto y 155 de ancho). interval (s): una pieza cada tanto al
    * mantener. spawnHeight: desde cuánto por encima del borde caen. El turno acaba cuando nada se
    * mueve más rápido que calmSpeed durante calmTime (s), o a los maxSettle s de soltar.
+   * coinScale 2.4 (era 1.6, decidido el 20-10-2026): con 1.6 una ronda de monedas en el recto
+   * pedía ~260 piezas y ~55 turnos. Con 2.4, ~90 en el recto, ~57 en la copa y 12–22 en la
+   * botella (las grandes se atascan en el cuello), y el paso de física cuesta un tercio.
    */
   solids: {
     marbleMin: 12, marbleMax: 19, marbleBounce: 0.3, marbleFriction: 0.04,
-    coinScale: 1.6, coinFriction: 0.45, wallFriction: 0.25,
+    coinScale: 2.4, coinFriction: 0.45, wallFriction: 0.25,
     interval: 0.22, spawnHeight: 50,
     calmSpeed: 0.15, calmTime: 0.3, maxSettle: 6,
   },

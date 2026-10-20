@@ -16,7 +16,7 @@ const infoLiquidos = {
 // Canicas y monedas (v0.7.0): textos propuestos, pendientes de que Iñigo los apruebe.
 const infoSolidos = {
   canicas: { texto: 'El vaso empieza vacío y se echan canicas: un toque, una; mantener, un puñado. Son de tamaños distintos, así que unas veces caben más y otras menos. Ruedan: arriba se escapan.', nota: 'Pierde quien hace caer una fuera del vaso.' },
-  monedas: { texto: 'Las ocho monedas de euro, a su tamaño. Se quedan cruzadas, dejan huecos y el montón se vuelve inestable, como un Jenga.', nota: 'Cuidado: un puñado puede tirar las de arriba.' },
+  monedas: { texto: 'Las ocho monedas de euro, a su tamaño. Se quedan cruzadas, dejan huecos y el montón se vuelve inestable, como una torre de bloques.', nota: 'Cuidado: un puñado puede tirar las de arriba.' },
 };
 
 export const es = {

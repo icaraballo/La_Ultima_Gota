@@ -32,6 +32,20 @@ function licenciasQueFaltan(): Plugin {
   };
 }
 
+/** Política de seguridad del contenido. Pages no deja poner cabeceras, así que va en un <meta>, y
+ * solo en la build (en desarrollo rompería la recarga de Vite). `style-src 'unsafe-inline'` hace
+ * falta por el <style> de temas.ts y los style="background:…" de app.ts; los scripts, estrictos.
+ * `frame-ancestors` no funciona en <meta>: contra los iframes no hay protección en Pages. */
+export const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'";
+
+function politicaDeContenido(): Plugin {
+  return {
+    name: 'politica-de-contenido',
+    apply: 'build',
+    transformIndexHtml: () => [{ tag: 'meta', attrs: { 'http-equiv': 'Content-Security-Policy', content: CSP }, injectTo: 'head-prepend' }],
+  };
+}
+
 export default defineConfig({
   // Rutas relativas: vale igual para GitHub Pages (/La_Ultima_Gota/) y para la APK de Capacitor.
   base: './',
@@ -41,7 +55,7 @@ export default defineConfig({
     // Pages lo sirva como texto y se lea en el navegador.
     license: { fileName: LICENCIAS },
   },
-  plugins: [licenciasQueFaltan()],
+  plugins: [politicaDeContenido(), licenciasQueFaltan()],
   define: { __VERSION__: JSON.stringify(version) },
   test: { environment: 'node', include: ['tests/**/*.test.ts'] },
 });

@@ -62,6 +62,7 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   display: flex; justify-content: space-between; pointer-events: none;
 }
 .esquinas > * { pointer-events: auto; }
+.esquina-dcha { display: flex; gap: 8px; }
 .redondo {
   width: 44px; height: 44px; border-radius: 22px; display: grid; place-items: center;
   border: 2px solid var(--panel-borde); background: var(--panel); color: var(--texto);
@@ -263,6 +264,25 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
 .tarjeta-info h4 { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; margin-bottom: 4px; }
 .tarjeta-info p { font-size: 15px; line-height: 1.4; }
 .tarjeta-info em { color: var(--suave); }
+/* Ajustes: una fila por interruptor. */
+.interruptor {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 64px;
+  padding: 10px 14px; background: var(--panel); border: 2px solid var(--panel-borde); border-radius: 16px;
+}
+.interruptor b { display: block; font-size: 17px; font-weight: 600; }
+.interruptor small { display: block; font-size: 14px; color: var(--suave); }
+.interruptor.apagado { opacity: .5; }
+.interruptor input {
+  appearance: none; -webkit-appearance: none; flex: none; position: relative;
+  width: 52px; height: 30px; border-radius: 15px; border: 2px solid var(--tinta);
+  background: var(--panel-borde); transition: background .15s;
+}
+.interruptor input::after {
+  content: ''; position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%;
+  background: #fff; border: 2px solid var(--tinta); transition: transform .15s;
+}
+.interruptor input:checked { background: var(--acento); }
+.interruptor input:checked::after { transform: translateX(22px); }
 .hoja-pie { color: var(--suave); font-style: italic; text-align: center; padding: 6px 8px 0; }
 
 .version {

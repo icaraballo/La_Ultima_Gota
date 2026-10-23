@@ -13,6 +13,8 @@ export const iconos = {
   sol: svg(24, 24, '<circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>'),
   info: svg(24, 24, '<circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 11v6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="7.4" r="1.5" fill="currentColor"/>'),
   dado: svg(24, 24, '<rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="9" cy="9" r="1.6" fill="currentColor"/><circle cx="15" cy="15" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/>'),
+  /** Ajustes: tres deslizadores (un engranaje se confundía con el sol del tema). */
+  ajustes: svg(24, 24, '<path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="9" cy="6" r="2.4" fill="var(--panel)" stroke="currentColor" stroke-width="2.2"/><circle cx="15.5" cy="12" r="2.4" fill="var(--panel)" stroke="currentColor" stroke-width="2.2"/><circle cx="7.5" cy="18" r="2.4" fill="var(--panel)" stroke="currentColor" stroke-width="2.2"/>'),
   /** Repetición (flecha en círculo). */
   repetir: svg(20, 20, '<path d="M16 10 A6 6 0 1 1 13.5 5.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M12 2.5 L15 5 L12 8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'),
   // Resumen del final (v0.12.0): generoso, rata, al límite e indeciso.

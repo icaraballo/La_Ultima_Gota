@@ -90,6 +90,14 @@ export const es = {
   statIndecisoTexto: 'Quien más tardaba en empezar a echar',
   cambiarJugadores: 'Cambiar jugadores',
 
+  ajustes: 'Ajustes',
+  ajusteSonido: 'Sonido',
+  ajusteSonidoTexto: 'Grifo, gotas, el desborde y el ganador',
+  ajusteVibracion: 'Vibración',
+  ajusteVibracionTexto: 'Con cada gota, con el chorro y al desbordar',
+  ajusteCercania: 'Aviso de borde',
+  ajusteCercaniaTexto: 'Vibra más a menudo cuanto más lleno se ve el vaso',
+  sinVibracion: 'Este móvil no deja vibrar a las páginas web (pasa en los iPhone).',
   info: 'Vasos y líquidos',
   cerrar: 'Cerrar',
   vasosTitulo: 'Vasos',
@@ -125,7 +133,7 @@ export const es = {
   entendido: 'Entendido',
   privacidadTexto: [
     'La Última Gota <b>no tiene servidor, ni cuentas, ni analítica, ni cookies</b>.',
-    'Guarda en este navegador los nombres de la última partida y el tema elegido. <b>Nada de eso sale de tu móvil</b>; si borras los datos del sitio, se borran.',
+    'Guarda en este navegador los nombres y las opciones de la última partida, el tema elegido y los ajustes. <b>Nada de eso sale de tu móvil</b>; si borras los datos del sitio, se borran.',
     'Si mandas una opinión, va a un <b>formulario de Google</b> con la versión del juego y la partida (vaso, qué se echa y cuántos jugáis). Tu nombre y tu contacto, solo si los escribes.',
     'GitHub, que aloja la página, y Google, si opinas, <b>ven tu dirección IP</b>, como cualquier web.',
   ],

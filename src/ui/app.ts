@@ -1,4 +1,6 @@
+import { Sonido } from '../audio/sonido';
 import { config } from '../core/config';
+import { Observador } from '../core/eventos';
 import { Game, type GameOptions, type Phase } from '../core/game';
 import { computeStats } from '../core/stats';
 import { CONTENT_IDS, isSolid, type ContentId } from '../core/contents';
@@ -10,6 +12,8 @@ import { Barra2D } from '../render/barra-2d';
 import { Escena3D } from '../render/escena-3d';
 import { Grabadora, REPETICION } from '../render/repeticion';
 import { aplicarTemas, guardarTema, LIQUIDOS, SOLIDOS, temaGuardado, type TemaId } from '../render/temas';
+import { puedeVibrar, Vibracion } from '../haptics/vibracion';
+import { sanearAjustes, type Ajustes } from './ajustes';
 import { createDebug } from './debug';
 import { esc } from './html';
 import { iconos } from './iconos';
@@ -18,8 +22,8 @@ import { mantenerVertical } from './orientacion';
 import { MAX_NOMBRE, sanearPreparacion, TIEMPOS, type Preparacion } from './preparacion';
 
 // Pantallas: jugadores (con vaso y líquido, opciones y la hoja ⓘ), «Turno de X», el vaso,
-// eliminado y el final (ganador, resumen y revancha). Sin «Cómo jugar» (decisión del 23-10-2026);
-// los ajustes de sonido y vibración llegan con ellos, en la fase 6.
+// eliminado y el final (ganador, resumen y revancha), y la hoja de Ajustes (sonido y vibración).
+// Sin «Cómo jugar» (decisión del 23-10-2026).
 
 const DT = 1 / config.stepsPerSecond;
 
@@ -31,6 +35,16 @@ function loadPrep(): Preparacion {
 }
 function savePrep(p: Preparacion) {
   try { localStorage.setItem(K_PARTIDA, JSON.stringify(p)); } catch { /* sin almacenamiento */ }
+}
+
+const K_AJUSTES = 'ultima-gota:ajustes';
+function loadAjustes(): Ajustes {
+  let saved: unknown = null;
+  try { saved = JSON.parse(localStorage.getItem(K_AJUSTES) ?? 'null'); } catch { /* sin almacenamiento o JSON roto */ }
+  return sanearAjustes(saved);
+}
+function saveAjustes(a: Ajustes) {
+  try { localStorage.setItem(K_AJUSTES, JSON.stringify(a)); } catch { /* sin almacenamiento */ }
 }
 
 /** Punto del color de lo que se echa. */
@@ -62,6 +76,22 @@ export function startApp(root: HTMLElement) {
   let names = prep.names;
   let game: Game | null = null;
   let shownPhase: Phase | null = null;
+
+  // Sonido y vibración: el observador dice qué ha pasado en cada imagen y ellos responden.
+  const ajustes = loadAjustes();
+  const sonido = new Sonido();
+  const vibracion = new Vibracion();
+  const observador = new Observador(config.flowMax);
+  function aplicarAjustes() {
+    sonido.activo = ajustes.sonido;
+    vibracion.activa = ajustes.vibracion;
+    vibracion.cercania = ajustes.cercania;
+    if (!ajustes.sonido) sonido.callar();
+    if (!ajustes.vibracion) vibracion.parar();
+  }
+  aplicarAjustes();
+  // El navegador no deja sonar hasta el primer toque.
+  root.addEventListener('pointerdown', () => sonido.despertar(), { capture: true });
 
   root.innerHTML = `
     <section class="pantalla" id="p-jugadores"></section>
@@ -146,6 +176,8 @@ export function startApp(root: HTMLElement) {
   }
   function showPlayers() {
     game = null;
+    sonido.callar();
+    vibracion.parar();
     document.body.classList.remove('en-juego');
     pJuego.hidden = true;
     pJugadores.hidden = false;
@@ -154,7 +186,10 @@ export function startApp(root: HTMLElement) {
       <div class="desplazable">
       <div class="esquinas">
         <button class="redondo" id="abrir-info" aria-label="${t.info}">${iconos.info}</button>
-        ${botonTema()}
+        <div class="esquina-dcha">
+          <button class="redondo" id="abrir-ajustes" aria-label="${t.ajustes}">${iconos.ajustes}</button>
+          ${botonTema()}
+        </div>
       </div>
       <div class="titulo">
         ${iconos.gotaTitulo}
@@ -217,6 +252,8 @@ export function startApp(root: HTMLElement) {
       cambiarTema();
     } else if (el.id === 'abrir-info') {
       abrirInfo();
+    } else if (el.id === 'abrir-ajustes') {
+      abrirAjustes();
     } else if (el.id === 'opinar') {
       opinion.abrir(datosOpinion());
     }
@@ -251,6 +288,48 @@ export function startApp(root: HTMLElement) {
     try { history.pushState({ hoja: true }, ''); } catch { /* sin historial */ }
     ($('cerrar-info') as HTMLButtonElement).focus();
   }
+  /** Hoja de Ajustes: un interruptor por ajuste (el aviso de borde, solo con vibración). */
+  function abrirAjustes() {
+    const vibra = puedeVibrar();
+    const fila = (id: keyof Ajustes, titulo: string, texto: string, apagado = false) => `
+      <li><label class="interruptor${apagado ? ' apagado' : ''}">
+        <span><b>${titulo}</b><small>${texto}</small></span>
+        <input type="checkbox" role="switch" data-ajuste="${id}" ${ajustes[id] ? 'checked' : ''} ${apagado ? 'disabled' : ''}>
+      </label></li>`;
+    hoja.innerHTML = `
+      <section class="hoja" role="dialog" aria-modal="true" aria-labelledby="hoja-titulo">
+        <header class="hoja-cab">
+          <h2 id="hoja-titulo">${t.ajustes}</h2>
+          <button class="redondo" id="cerrar-info" aria-label="${t.cerrar}">×</button>
+        </header>
+        <div class="hoja-cuerpo">
+          <ul>
+            ${fila('sonido', t.ajusteSonido, t.ajusteSonidoTexto)}
+            ${fila('vibracion', t.ajusteVibracion, t.ajusteVibracionTexto, !vibra)}
+            ${fila('cercania', t.ajusteCercania, t.ajusteCercaniaTexto, !vibra || !ajustes.vibracion)}
+          </ul>
+          ${vibra ? '' : `<p class="hoja-pie">${t.sinVibracion}</p>`}
+        </div>
+      </section>`;
+    hoja.hidden = false;
+    try { history.pushState({ hoja: true }, ''); } catch { /* sin historial */ }
+    ($('cerrar-info') as HTMLButtonElement).focus();
+  }
+  hoja.addEventListener('change', e => {
+    const el = e.target as HTMLInputElement;
+    const id = el.dataset.ajuste as keyof Ajustes | undefined;
+    if (!id) return;
+    ajustes[id] = el.checked;
+    saveAjustes(ajustes);
+    aplicarAjustes();
+    if (id === 'vibracion') {
+      const cerca = hoja.querySelector<HTMLInputElement>('[data-ajuste="cercania"]')!;
+      cerca.disabled = !el.checked;
+      cerca.closest('.interruptor')!.classList.toggle('apagado', !el.checked);
+      if (el.checked) navigator.vibrate?.(40); // para notar que vibra
+    }
+  });
+
   /** Hoja desde abajo con todas las opciones de un grupo y la explicación de lo elegido. Elegir
    * la cierra. Usa el mismo fondo que la hoja ⓘ. */
   function abrirElegir(grupo: Grupo) {
@@ -332,7 +411,12 @@ export function startApp(root: HTMLElement) {
   // Salir a otra app con el dedo puesto no siempre manda pointerup ni pointercancel: sin esto,
   // al volver el chorro seguía abierto y el turno no acababa (UB-05).
   const soltarSiPulsa = () => { if (game?.pressing) release(); };
-  document.addEventListener('visibilitychange', () => { if (document.hidden) soltarSiPulsa(); });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) return;
+    soltarSiPulsa();
+    sonido.callar();
+    vibracion.parar();
+  });
   window.addEventListener('pagehide', soltarSiPulsa);
   window.addEventListener('blur', soltarSiPulsa);
 
@@ -436,6 +520,7 @@ export function startApp(root: HTMLElement) {
     reloj.textContent = String(seg);
     reloj.setAttribute('aria-label', t.segundosParaEchar(seg));
     reloj.classList.toggle('apurado', seg <= 3);
+    if (seg <= 3 && seg > 0) sonido.tic(seg === 1);
   }
 
   // Frase al eliminar: al azar, sin repetir la anterior (si hay más de una).
@@ -491,6 +576,13 @@ export function startApp(root: HTMLElement) {
         setZona(game.poured);
         pintarReloj(game);
         if (game.phase === 'desborde' && !repeVista && grabadora.lista) empezarRepeticion();
+        for (const ev of observador.eventos(game)) {
+          sonido.sonar(ev);
+          vibracion.vibrar(ev);
+        }
+        const estado = observador.estado(game);
+        sonido.actualizar(estado);
+        vibracion.actualizar(estado, nowMs);
         const now = nowMs / 1000;
         if (repeticion) {
           const t = now - repeDesde;

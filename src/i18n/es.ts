@@ -68,6 +68,11 @@ export const es = {
   eliminadoPieza: (nombre: string, pieza: 'canicas' | 'monedas') =>
     `${nombre} ha echado la última ${pieza === 'canicas' ? 'canica' : 'moneda'}`,
   quedan: (n: number) => `Quedan ${n}`,
+  /** Frases con humor al eliminar (§7.1): salen al azar, sin repetir la anterior. Iñigo las
+   * aprueba antes de entrar (23-10-2026: de momento, una). */
+  frasesEliminado: ['La gota que colmó el vaso'],
+  camaraLenta: 'Cámara lenta',
+  verOtraVez: 'Verlo otra vez',
   siguienteRonda: 'Siguiente ronda',
   combinacionAleatoria: 'Vaso y líquido aleatorios',
   verGanador: 'Ver ganador',

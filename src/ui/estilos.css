@@ -199,7 +199,7 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
   display: flex; align-items: center; gap: 10px; padding: 10px 12px;
   background: var(--panel); border: 2px solid var(--panel-borde); border-radius: 16px;
 }
-.stat-icono { flex: none; width: 32px; text-align: center; font-size: 24px; }
+.stat-icono { flex: none; width: 32px; display: grid; place-items: center; color: var(--acento); }
 .stat-texto { flex: 1; min-width: 0; font-size: 16px; }
 .stat-texto small { display: block; font-size: 13px; color: var(--suave); }
 .stat-quien {
@@ -219,6 +219,18 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
   box-shadow: 0 6px 0 var(--tinta);
 }
 .tarjeta h2 { font-size: 22px; color: var(--peligro); margin: 0; overflow-wrap: anywhere; }
+.frase { font-size: 17px; font-style: italic; color: var(--suave); margin-bottom: -6px; }
+.enlace-otra-vez {
+  align-self: center; display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px;
+  border: 0; background: transparent; color: var(--acento); font-size: 16px; font-weight: 600;
+}
+/* Repetición a cámara lenta: etiqueta en la cabecera mientras se reproduce. */
+.camara-lenta {
+  display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 18px;
+  background: var(--peligro); color: #fff; font-size: 17px; font-weight: 700;
+  animation: latir 1.2s ease-in-out infinite;
+}
+@keyframes latir { 50% { opacity: .6; } }
 
 /* ── Hoja ⓘ ── */
 .hoja-fondo {

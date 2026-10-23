@@ -13,6 +13,13 @@ export const iconos = {
   sol: svg(24, 24, '<circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>'),
   info: svg(24, 24, '<circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 11v6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="7.4" r="1.5" fill="currentColor"/>'),
   dado: svg(24, 24, '<rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="9" cy="9" r="1.6" fill="currentColor"/><circle cx="15" cy="15" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/>'),
+  /** Repetición (flecha en círculo). */
+  repetir: svg(20, 20, '<path d="M16 10 A6 6 0 1 1 13.5 5.2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M12 2.5 L15 5 L12 8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'),
+  // Resumen del final (v0.12.0): generoso, rata, al límite e indeciso.
+  ola: svg(28, 28, '<path d="M3 17 Q7 12 11 17 T19 17 T27 17" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M3 23 Q7 18 11 23 T19 23 T27 23" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M14 3 C17 7 19 9 19 11.5 A5 5 0 0 1 9 11.5 C9 9 11 7 14 3 Z" fill="currentColor"/>'),
+  gotita: svg(28, 28, '<path d="M14 9 C16 12 18 14 18 16.5 A4 4 0 0 1 10 16.5 C10 14 12 12 14 9 Z" fill="currentColor"/><circle cx="14" cy="14" r="11.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.5 3"/>'),
+  limite: svg(28, 28, '<path d="M7 9 L8.5 25 H19.5 L21 9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M7.4 11 Q14 4 20.6 11 Z" fill="currentColor"/><path d="M8 14 H20 L19.5 25 H8.5 Z" fill="currentColor" opacity=".45"/>'),
+  reloj: svg(28, 28, '<circle cx="14" cy="15.5" r="9.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M14 10 V15.5 L17.5 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M11 3 H17" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>'),
   vasos: {
     cilindro: svg(24, 24, '<path d="M6 4 L7 20 H17 L18 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>'),
     copa: svg(24, 24, '<path d="M3 4 L9 20 H15 L21 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>'),

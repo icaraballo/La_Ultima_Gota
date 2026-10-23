@@ -426,6 +426,8 @@ describe('contenido: vasos, líquidos y espuma', () => {
     expect(`${g.vesselId}:${g.contentId}`).not.toBe(anterior);
   });
 
+  // 48 partidas enteras (con física en las de piezas): tarda unos 5 s, el tope de serie, y
+  // fallaba con el ordenador ocupado.
   it('las 48 combinaciones se juegan hasta un ganador', () => {
     for (const vessel of VESSEL_IDS) {
       for (const liquid of CONTENT_IDS) {
@@ -439,7 +441,7 @@ describe('contenido: vasos, líquidos y espuma', () => {
         expect(g.winner, `${liquid} en ${vessel}`).not.toBeNull();
       }
     }
-  });
+  }, 30_000);
 });
 
 describe('canicas y monedas', () => {

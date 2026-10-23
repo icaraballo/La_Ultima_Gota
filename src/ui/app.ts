@@ -8,6 +8,7 @@ import { VESSEL_IDS, type VesselId } from '../core/vessels';
 import { t } from '../i18n';
 import { Barra2D } from '../render/barra-2d';
 import { Escena3D } from '../render/escena-3d';
+import { Grabadora, REPETICION } from '../render/repeticion';
 import { aplicarTemas, guardarTema, LIQUIDOS, SOLIDOS, temaGuardado, type TemaId } from '../render/temas';
 import { createDebug } from './debug';
 import { esc } from './html';
@@ -68,6 +69,7 @@ export function startApp(root: HTMLElement) {
       <header class="cabecera">
         <div class="reloj" id="j-reloj" hidden></div>
         <div class="turno-de" id="j-turno"></div>
+        <div class="camara-lenta" id="j-lenta" hidden>${iconos.repetir}${t.camaraLenta}</div>
         <div class="despues" id="j-despues"></div>
       </header>
       <canvas id="j-vaso"></canvas>
@@ -358,9 +360,11 @@ export function startApp(root: HTMLElement) {
     const el = (e.target as HTMLElement).closest('button');
     if (!el || !game || (!capaArmada && e.detail !== 0)) return;
     if (el.id === 'listo') {
+      grabadora.reset();
       game.ready();
       setZona(false);
     }
+    else if (el.id === 'otra-vez') empezarRepeticion();
     else if (el.id === 'seguir') game.continue();
     else if (el.id === 'seguir-azar') game.continue(true);
     else if (el.id === 'revancha') start();
@@ -386,10 +390,12 @@ export function startApp(root: HTMLElement) {
       const quedan = g.alive.length;
       capa.innerHTML = `
         <div class="tarjeta">
+          <p class="frase">«${elegirFrase()}»</p>
           <h2>${isSolid(g.contentId) ? t.eliminadoPieza(nombre(g.loser!), g.contentId) : t.eliminado(nombre(g.loser!))}</h2>
           ${quedan > 1 ? `<p>${t.quedan(quedan)}</p>` : ''}
           <button class="boton principal" id="seguir">${quedan > 1 ? t.siguienteRonda : t.verGanador}</button>
           ${quedan > 1 ? `<button class="boton con-icono" id="seguir-azar">${iconos.dado}${t.combinacionAleatoria}</button>` : ''}
+          <button class="enlace-otra-vez con-icono" id="otra-vez" hidden>${iconos.repetir}${t.verOtraVez}</button>
         </div>`;
     } else if (g.phase === 'fin') {
       const s = computeStats(g.history);
@@ -400,10 +406,10 @@ export function startApp(root: HTMLElement) {
           <span class="stat-quien">${punto(d.player)}${nombre(d.player)}</span>
         </li>` : '';
       const filas = [
-        fila('🌊', t.statGeneroso, t.statGenerosoTexto, s.generoso),
-        fila('💧', t.statRata, t.statRataTexto, s.rata),
-        fila('😰', t.statLimite, t.statLimiteTexto, s.alLimite),
-        fila('⏱️', t.statIndeciso, t.statIndecisoTexto, s.indeciso),
+        fila(iconos.ola, t.statGeneroso, t.statGenerosoTexto, s.generoso),
+        fila(iconos.gotita, t.statRata, t.statRataTexto, s.rata),
+        fila(iconos.limite, t.statLimite, t.statLimiteTexto, s.alLimite),
+        fila(iconos.reloj, t.statIndeciso, t.statIndecisoTexto, s.indeciso),
       ].join('');
       capa.innerHTML = `
         <h1 class="grande">${t.gana(nombre(g.winner!))}</h1>
@@ -432,6 +438,37 @@ export function startApp(root: HTMLElement) {
     reloj.classList.toggle('apurado', seg <= 3);
   }
 
+  // Frase al eliminar: al azar, sin repetir la anterior (si hay más de una).
+  let ultimaFrase = -1;
+  function elegirFrase() {
+    const fs = t.frasesEliminado;
+    let i = Math.floor(Math.random() * fs.length);
+    if (fs.length > 1 && i === ultimaFrase) i = (i + 1) % fs.length;
+    ultimaFrase = i;
+    return fs[i];
+  }
+
+  // ── Repetición a cámara lenta del desborde ──
+  // Al desbordar se ve en directo; en cuanto está grabado lo de después, se repite despacio
+  // (con su propio reloj, también lento) y se queda en la última imagen hasta seguir.
+  const grabadora = new Grabadora(DT);
+  let repeticion: ((t: number) => Game) | null = null;
+  let repeDesde = 0;
+  let repeVista = false;
+  function empezarRepeticion() {
+    if (!game || !grabadora.lista) return;
+    repeticion = grabadora.reproductor(game);
+    repeDesde = performance.now() / 1000;
+    repeVista = true;
+    $('j-lenta').hidden = false;
+    capa.querySelector<HTMLElement>('#otra-vez')?.setAttribute('hidden', '');
+  }
+  function pararRepeticion() {
+    repeticion = null;
+    repeVista = false;
+    $('j-lenta').hidden = true;
+  }
+
   // ── Bucle: lógica a paso fijo, dibujo a lo que dé la pantalla ──
   let last = performance.now();
   let acc = 0;
@@ -443,15 +480,26 @@ export function startApp(root: HTMLElement) {
       if (game) {
         while (acc >= DT) {
           game.step(DT);
+          if (game.phase === 'echando' || game.phase === 'desborde') grabadora.grabar(game);
           acc -= DT;
         }
         if (game.phase !== shownPhase) {
           shownPhase = game.phase;
+          if (game.phase !== 'desborde') pararRepeticion();
           showPhase(game);
         }
         setZona(game.poured);
         pintarReloj(game);
-        vista.draw(game, nowMs / 1000);
+        if (game.phase === 'desborde' && !repeVista && grabadora.lista) empezarRepeticion();
+        const now = nowMs / 1000;
+        if (repeticion) {
+          const t = now - repeDesde;
+          if (t > grabadora.duracion) {
+            $('j-lenta').hidden = true;
+            capa.querySelector<HTMLElement>('#otra-vez')?.removeAttribute('hidden');
+          }
+          vista.draw(repeticion(t), repeDesde + t * REPETICION.velocidad);
+        } else vista.draw(game, now);
         debug.update(game);
       } else {
         acc = 0;

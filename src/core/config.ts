@@ -85,8 +85,10 @@ export const config = {
    * motor): caben las canicas pequeñas y alguna moneda; las que salen por ahí no eliminan.
    * maxPerTurn 0.015 (era 0.08, v0.15.0): tiene que ser menos de lo que echa un toque (~0.035);
    * con 0.08 quien solo tocaba nunca llenaba y la ronda no acababa (simulador, 23-10-2026).
+   * rate 0.006 (era 0.05, v0.15.1): con el tope nuevo, a 0.05 se vaciaba en 0,3 s y el chorrito no
+   * se llegaba a ver; así dura ~2,5 s del pase. El simulador da lo mismo (fuga · agua 6,1 vueltas).
    */
-  leak: { height: 0.45, rate: 0.05, maxPerTurn: 0.015, sizePx: 30 },
+  leak: { height: 0.45, rate: 0.006, maxPerTurn: 0.015, sizePx: 30 },
 
   /**
    * Esmerilado (v0.11.0): el cristal grueso deforma y el nivel se ve desplazado `maxOffset`

@@ -194,6 +194,10 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
   padding: 24px 16px; text-align: center;
 }
 .capa.turno, .capa.fin { background: var(--fondo); }
+/* Vaso con fuga: el vaso se ve detrás (se escapa mientras se pasa el móvil). */
+.capa.turno.con-vaso { background: transparent; justify-content: flex-end; padding-bottom: max(24px, var(--sa-abajo)); }
+.tarjeta-turno { align-items: center; gap: 10px; }
+.tarjeta-turno .grande { font-size: 30px; }
 /* Final: ganador, resumen y botones; con muchos nombres largos puede no caber y hace scroll. */
 .capa.fin { justify-content: safe center; overflow-y: auto; gap: 14px; padding-top: max(24px, var(--sa-arriba)); padding-bottom: max(24px, var(--sa-abajo)); }
 .resumen { width: 100%; max-width: 380px; text-align: left; }

@@ -493,11 +493,16 @@ export function startApp(root: HTMLElement) {
     capa.className = 'capa ' + g.phase;
     if (g.phase === 'turno') zonaUsada = null; // el texto cambia si la ronda pasa a piezas
     if (g.phase === 'turno') {
-      capa.innerHTML = `
+      // Vaso con fuga y líquido (v0.15.1): el líquido se escapa mientras se pasa el móvil, así que
+      // la pantalla deja ver el vaso detrás y lo de pasar el móvil va en una tarjeta abajo.
+      const conVaso = g.glass.vessel.leaks && !g.pile;
+      capa.classList.toggle('con-vaso', conVaso);
+      const dentro = `
         <p class="pequeno">${t.pasaElMovil}</p>
         <h1 class="grande">${punto(g.current)}${t.turnoDe(nombre(g.current))}</h1>
         <p class="combinacion">${t.combinacion(t.liquidos[g.contentId], t.vasos[g.vesselId])}</p>
         <button class="boton principal" id="listo">${t.listo}</button>`;
+      capa.innerHTML = conVaso ? `<div class="tarjeta tarjeta-turno">${dentro}</div>` : dentro;
     } else if (g.phase === 'desborde') {
       const quedan = g.alive.length;
       capa.innerHTML = `

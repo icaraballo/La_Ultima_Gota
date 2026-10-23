@@ -77,6 +77,13 @@ export const config = {
    */
   leak: { height: 0.45, rate: 0.05, maxPerTurn: 0.08, sizePx: 30 },
 
+  /**
+   * Esmerilado (v0.11.0): el cristal grueso deforma y el nivel se ve desplazado `maxOffset`
+   * (altura relativa) como mucho, hacia arriba o hacia abajo, distinto en cada ronda y nunca
+   * menos del `minShare` del máximo. Solo cambia lo que se ve, no cuándo desborda.
+   */
+  frosted: { maxOffset: 0.08, minShare: 0.4 },
+
   liquids: {
     agua: { flowMul: 1, inertia: 0.15, meniscus: 0.025, foamPerFlow: 0, foamDecay: 0.5, rise: 0, riseGrow: 0 },
     aceite: { flowMul: 0.8, inertia: 0.35, meniscus: 0.008, foamPerFlow: 0, foamDecay: 0.5, rise: 0, riseGrow: 0 },

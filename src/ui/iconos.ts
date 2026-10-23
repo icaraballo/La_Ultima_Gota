@@ -21,5 +21,6 @@ export const iconos = {
     tarta: svg(24, 24, '<path d="M9 3 V8 H6 V13 H3 V20 H21 V13 H18 V8 H15 V3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>'),
     chupito: svg(24, 24, '<path d="M7 11 L8 20 H16 L17 11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>'),
     fuga: svg(24, 24, '<path d="M6 4 L7 20 H17 L18 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M17.6 12 Q21 13 21 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>'),
+    esmerilado: svg(24, 24, '<path d="M6 4 L7 20 H17 L18 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M9 9h2M12.5 12h2.5M9.5 15.5h2M13 17.5h1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'),
   } satisfies Record<VesselId, string>,
 };

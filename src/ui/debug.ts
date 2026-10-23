@@ -37,6 +37,16 @@ const solido = (key: keyof typeof config.solids, label: string, min: number, max
   get: () => config.solids[key],
   set: v => { config.solids[key] = v; },
 });
+const fuga = (key: keyof typeof config.leak, label: string, min: number, max: number, step: number): Param => ({
+  label, min, max, step,
+  get: () => config.leak[key],
+  set: v => { config.leak[key] = v; },
+});
+const esmerilado = (key: keyof typeof config.frosted, label: string, min: number, max: number, step: number): Param => ({
+  label, min, max, step,
+  get: () => config.frosted[key],
+  set: v => { config.frosted[key] = v; },
+});
 const peso = (i: number, label: string): Param => ({
   label, min: 0, max: 1, step: 0.01,
   get: () => config.dropCountWeights[i],
@@ -79,6 +89,16 @@ const PARAMS: { grupo: string; params: Param[] }[] = [
     solido('marbleMax', 'Canica más grande (px)', 6, 34, 1),
     solido('coinScale', 'Tamaño de monedas (×)', 1, 4, 0.1),
     solido('interval', 'Una pieza cada (s) al mantener', 0.08, 0.6, 0.01),
+  ] },
+  { grupo: 'Vaso con fuga', params: [
+    fuga('height', 'Altura del agujero', 0.1, 0.9, 0.01),
+    fuga('rate', 'Se escapa (vol/s)', 0, 0.3, 0.005),
+    fuga('maxPerTurn', 'Tope por pase (vol)', 0, 0.3, 0.005),
+    fuga('sizePx', 'Hueco para piezas (px)', 10, 60, 1),
+  ] },
+  { grupo: 'Esmerilado (en la ronda siguiente)', params: [
+    esmerilado('maxOffset', 'Desvío máximo del nivel', 0, 0.25, 0.005),
+    esmerilado('minShare', 'Desvío mínimo (× máximo)', 0, 1, 0.05),
   ] },
   { grupo: 'Ronda', params: [
     top('meniscusVariance', 'Variación oculta (±)', 0, 0.5, 0.01),
@@ -235,6 +255,7 @@ export function createDebug(root: HTMLElement, barra: Vista) {
         `espuma    ${pct(glass.foam)}`,
         `altura    ${pct(glass.height)}`,
         `límite    ${pct(glass.limit)} (margen ${pct(glass.margin)})`,
+        ...(glass.illusion ? [`se ve     ${glass.illusion > 0 ? '+' : ''}${pct(glass.illusion)} de alto (esmerilado)`] : []),
         `peligro   ${pct(glass.danger)}`,
         `caudal    ${faucet.flow.toFixed(3)} vol/s`,
         `en el aire ${pct(aire)}`,

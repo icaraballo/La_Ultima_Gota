@@ -53,7 +53,7 @@ export class Barra2D {
     const rimY = mesaY - gh;
     const spoutY = Math.max(24, rimY - Math.max(70, h * 0.18));
 
-    const level = glass.height;
+    const level = glass.shownHeight;
     const surfaceY = mesaY - Math.min(level, 1) * gh;
     const dome = Math.max(0, level - 1) * gh * MENISCO_VISIBLE;
 

@@ -425,7 +425,7 @@ describe('contenido: vasos, líquidos y espuma', () => {
     expect(`${g.vesselId}:${g.contentId}`).not.toBe(anterior);
   });
 
-  it('las 42 combinaciones se juegan hasta un ganador', () => {
+  it('las 48 combinaciones se juegan hasta un ganador', () => {
     for (const vessel of VESSEL_IDS) {
       for (const liquid of CONTENT_IDS) {
         const g = new Game(['A', 'B', 'C'], { seed: 5, vessel, content: liquid }, rapido);
@@ -600,5 +600,30 @@ describe('vaso con fuga (v0.10.0)', () => {
     }
     expect(pile.pieces.some(p => p.escaped)).toBe(true);
     if (pile.out) expect(pile.out.escaped).toBeFalsy();
+  });
+});
+
+describe('esmerilado (v0.11.0)', () => {
+  it('el nivel se ve desplazado, distinto en cada ronda, sin cambiar cuándo desborda', () => {
+    const { maxOffset, minShare } = config.frosted;
+    const vasos = Array.from({ length: 40 }, (_, i) => new Glass(getVessel('esmerilado'), agua, createRng(i), config));
+    for (const g of vasos) {
+      expect(Math.abs(g.illusion)).toBeGreaterThanOrEqual(maxOffset * minShare - 1e-9);
+      expect(Math.abs(g.illusion)).toBeLessThanOrEqual(maxOffset + 1e-9);
+    }
+    expect(vasos.some(g => g.illusion > 0) && vasos.some(g => g.illusion < 0)).toBe(true);
+    const g = vasos[0];
+    const recto = new Glass(getVessel('cilindro'), agua, createRng(0), config);
+    expect(g.limit).toBeCloseTo(recto.limit, 9); // mismo margen: el desvío no gasta azar del menisco
+    g.add(0.6);
+    expect(g.shownHeight - g.height).toBeCloseTo(g.illusion, 9);
+    expect(g.shown(0)).toBe(0);
+  });
+
+  it('los demás vasos se ven tal cual', () => {
+    const g = new Glass(getVessel('cilindro'), agua, createRng(1), config);
+    g.add(0.5);
+    expect(g.illusion).toBe(0);
+    expect(g.shownHeight).toBe(g.height);
   });
 });

@@ -17,10 +17,33 @@ export class Glass {
   readonly margin: number;
   /** Volumen total (líquido + espuma) a partir del que desborda. */
   readonly limit: number;
+  /** Esmerilado: cuánto se ve desplazado el nivel en esta ronda (altura relativa; 0 = nada). */
+  readonly illusion: number = 0;
 
   constructor(readonly vessel: Vessel, readonly liquid: Liquid, rng: Rng, cfg: Config) {
     this.margin = liquid.meniscus * (1 + cfg.meniscusVariance * rng.signed());
     this.limit = vessel.heightToVolume(1 + this.margin);
+    // Solo se sortea en el esmerilado, para no cambiar las partidas de los demás vasos.
+    if (vessel.frosted) {
+      const { maxOffset, minShare } = cfg.frosted;
+      const r = rng.signed();
+      this.illusion = Math.sign(r || 1) * maxOffset * (minShare + (1 - minShare) * Math.abs(r));
+    }
+  }
+
+  /** Lo que se ve de una altura real: en el esmerilado, desplazada (desde el 30 % del vaso, para
+   * que el fondo no flote ni se hunda). */
+  shown(h: number) {
+    if (!this.illusion || h <= 0) return h;
+    return Math.max(0.005, h + this.illusion * Math.min(1, h / 0.3));
+  }
+
+  /** Alturas tal como se ven (para dibujar). */
+  get shownHeight() {
+    return this.shown(this.height);
+  }
+  get shownLiquidHeight() {
+    return this.shown(this.liquidHeight);
   }
 
   get total() {

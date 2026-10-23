@@ -263,6 +263,8 @@ export class Escena3D {
   private outRingMat = basic('#e8735f');
   private color = new THREE.Color();
 
+  /** Esmerilado: brillos de más que dan aspecto de cristal grueso. */
+  private glassThick = [0, 1, 2].map(() => new THREE.Mesh(new THREE.BufferGeometry(), basic('#FFF4E2', { transparent: true, opacity: 0.22, depthWrite: false })));
   /** Vaso con fuga: el agujero (un disco de tinta en el cristal) y el chorrito que sale. */
   private hole = new THREE.Mesh(new THREE.CircleGeometry(0.07, 18), basic('#140B08'));
   private leakMat = basic('#4FA9E6');
@@ -403,7 +405,7 @@ export class Escena3D {
       ...this.foamDots, this.bubbles, this.drops, this.dropsInk, this.dropsHi, this.stream, this.streamInk,
       this.streamHi, this.bits, this.bitsInk, ...this.ripples, ...this.rivers, ...this.riversInk,
       this.puddleInk, this.puddle, this.puddleHi, this.glass, ...this.glassHi, this.glassLine,
-      this.rimInk, this.rim, this.limitRing, this.hole, this.leakStream);
+      this.rimInk, this.rim, this.limitRing, this.hole, this.leakStream, ...this.glassThick);
     this.setTema('noche');
   }
 
@@ -482,7 +484,7 @@ export class Escena3D {
     this.inkBasic.color.set(c.tinta);
     this.rimInkMat.color.set(c.tinta);
     this.glassMat.color.set(c.cristal);
-    this.glassMat.opacity = c.cristalOpacidad;
+    this.glassMat.opacity = c.cristalOpacidad * (this.vessel?.frosted ? 2.6 : 1);
     this.rimMat.color.set(c.aro);
     this.tableTop.color.set(c.tablero);
     this.tableLine.color.set(c.tableroLinea);
@@ -658,6 +660,17 @@ export class Escena3D {
       m.position.y = GH;
     }
 
+    // Esmerilado: cristal más opaco y con más brillos, como grueso.
+    this.glassMat.opacity = this.tema.cristalOpacidad * (v.frosted ? 2.6 : 1);
+    this.glassThick.forEach(m => { m.visible = v.frosted; });
+    if (v.frosted) {
+      const franjas: [number, number, number, number][] = [[0.05, 0.95, -0.5, -0.38], [0.15, 0.7, 0.3, 0.42], [0.4, 0.98, 0.82, 0.9]];
+      franjas.forEach(([h0, h1, s0, s1], i) => {
+        this.glassThick[i].geometry.dispose();
+        this.glassThick[i].geometry = band(v, h0, h1, s0, s1, GLASS + 0.006);
+      });
+    }
+
     // Agujero del vaso con fuga, girado hacia la derecha para que se vea de frente a medias.
     this.hole.visible = v.leaks;
     this.leakStream.visible = false;
@@ -796,8 +809,9 @@ export class Escena3D {
     const l = LIQUIDOS[liquidId];
 
     // Alturas: líquido, espuma encima y, si pasa del borde, la cúpula del menisco.
-    const top = glass.height;
-    const liquidTop = Math.min(glass.liquidHeight, 1);
+    // En el esmerilado, desplazadas: se dibuja lo que se ve, no lo que hay.
+    const top = glass.shownHeight;
+    const liquidTop = Math.min(glass.shownLiquidHeight, 1);
     const capped = Math.min(top, 1);
     const dome = Math.max(0, top - 1) * GH * MENISCO_VISIBLE;
     const hasFoam = capped - liquidTop >= 0.002;

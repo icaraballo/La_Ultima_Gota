@@ -2,8 +2,8 @@
 // El nivel se calcula integrando el área, así que el mismo volumen sube distinto en cada
 // forma. El perfil servirá también para la geometría 3D (LatheGeometry, fase 3).
 
-export type VesselId = 'cilindro' | 'copa' | 'botella' | 'pecera' | 'tarta' | 'chupito' | 'fuga';
-export const VESSEL_IDS: VesselId[] = ['cilindro', 'copa', 'botella', 'pecera', 'tarta', 'chupito', 'fuga'];
+export type VesselId = 'cilindro' | 'copa' | 'botella' | 'pecera' | 'tarta' | 'chupito' | 'fuga' | 'esmerilado';
+export const VESSEL_IDS: VesselId[] = ['cilindro', 'copa', 'botella', 'pecera', 'tarta', 'chupito', 'fuga', 'esmerilado'];
 
 export interface Vessel {
   id: string;
@@ -14,6 +14,8 @@ export interface Vessel {
   capacity: number;
   /** Tiene un agujero en la pared (vaso con fuga); la altura está en config.leak. */
   leaks: boolean;
+  /** Cristal grueso que deforma (esmerilado): el nivel no se ve donde está. */
+  frosted: boolean;
   /** Radio respecto al del recto, a la altura h ∈ [0, 1]. */
   radius(h: number): number;
   /** Altura del líquido (1 = borde) para un volumen (1 = lleno hasta el borde). */
@@ -23,7 +25,7 @@ export interface Vessel {
 
 const SAMPLES = 256;
 
-export function makeVessel(id: string, radius: (h: number) => number, height = 1, leaks = false): Vessel {
+export function makeVessel(id: string, radius: (h: number) => number, height = 1, leaks = false, frosted = false): Vessel {
   // Volumen acumulado V(h) = ∫ r² dh, por trapecios, normalizado a 1 en el borde.
   const acc = new Float64Array(SAMPLES + 1);
   for (let i = 1; i <= SAMPLES; i++) {
@@ -41,6 +43,7 @@ export function makeVessel(id: string, radius: (h: number) => number, height = 1
     height,
     capacity: total * height,
     leaks,
+    frosted,
     radius,
     volumeToHeight(v) {
       if (v <= 0) return 0;
@@ -89,6 +92,8 @@ const vessels: Record<VesselId, Vessel> = {
   chupito: makeVessel('chupito', h => (46 + 10 * h) / 77.5, 0.4),
   // Con fuga (v0.10.0): un recto con un agujero a media altura (config.leak).
   fuga: makeVessel('fuga', () => 1, 1, true),
+  // Esmerilado (v0.11.0): un recto de cristal grueso; el desvío de cada ronda está en Glass.
+  esmerilado: makeVessel('esmerilado', () => 1, 1, false, true),
 };
 
 export function getVessel(id: VesselId): Vessel {

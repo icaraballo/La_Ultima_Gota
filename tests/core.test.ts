@@ -738,3 +738,20 @@ describe('estadísticas del final (v0.12.0)', () => {
     expect(s.indeciso).not.toBeNull();
   });
 });
+
+describe('equilibrado del simulador (v0.15.0)', () => {
+  it('monedas: ×3,2 en general y ×2,0 en la botella (se atascan en el cuello)', () => {
+    const ancho = (vaso: 'cilindro' | 'botella' | 'chupito') => {
+      const p = new Pile('monedas', getVessel(vaso), createRng(7), config);
+      p.drop();
+      return p.pieces[0].w;
+    };
+    // La misma semilla da la misma moneda: solo cambia la escala.
+    expect(ancho('cilindro') / ancho('botella')).toBeCloseTo(config.solids.coinScale / config.coinScaleByVessel.botella, 5);
+    expect(ancho('chupito')).toBeCloseTo(ancho('cilindro'), 5);
+  });
+
+  it('fuga: lo que se escapa por pase es menos que lo que echa un toque', () => {
+    expect(config.leak.maxPerTurn).toBeLessThan(config.dropVolume * (1 - config.dropVariance));
+  });
+});

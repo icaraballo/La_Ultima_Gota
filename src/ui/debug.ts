@@ -88,6 +88,8 @@ const PARAMS: { grupo: string; params: Param[] }[] = [
     solido('marbleMin', 'Canica más pequeña (px)', 6, 30, 1),
     solido('marbleMax', 'Canica más grande (px)', 6, 34, 1),
     solido('coinScale', 'Tamaño de monedas (×)', 1, 4, 0.1),
+    { label: 'Monedas en la botella (×)', min: 1, max: 4, step: 0.1,
+      get: () => config.coinScaleByVessel.botella, set: v => { config.coinScaleByVessel.botella = v; } },
     solido('interval', 'Una pieza cada (s) al mantener', 0.08, 0.6, 0.01),
   ] },
   { grupo: 'Vaso con fuga', params: [

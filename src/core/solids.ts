@@ -117,7 +117,8 @@ export class Pile {
     } else {
       const variant = Math.floor(rng.next() * COINS.length);
       const c = COINS[variant];
-      const w = c.d * s.coinScale, h = Math.max(3.5, c.t * s.coinScale * 1.6);
+      const scale = this.cfg.coinScaleByVessel[this.vessel.id] ?? s.coinScale;
+      const w = c.d * scale, h = Math.max(3.5, c.t * scale * 1.6);
       body = Matter.Bodies.rectangle(jit * 22, y, w, h, {
         chamfer: { radius: Math.min(2, h / 2 - 0.5) }, restitution: 0.06, friction: s.coinFriction,
         frictionStatic: 0.7, frictionAir: 0.01, density: 0.008, angle: rng.next() * Math.PI,

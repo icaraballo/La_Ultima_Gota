@@ -61,21 +61,32 @@ export const config = {
    * coinScale 2.4 (era 1.6, decidido el 20-10-2026): con 1.6 una ronda de monedas en el recto
    * pedía ~260 piezas y ~55 turnos. Con 2.4, ~90 en el recto, ~57 en la copa y 12–22 en la
    * botella (las grandes se atascan en el cuello), y el paso de física cuesta un tercio.
+   * coinScale 3.2 (v0.15.0, simulador de bots del 23-10-2026): con 2.4 las monedas daban 7–10
+   * vueltas en los vasos anchos (bot aleatorio, 4 jugadores); con 3.2, 3–5.
    */
   solids: {
     marbleMin: 12, marbleMax: 19, marbleBounce: 0.3, marbleFriction: 0.04,
-    coinScale: 2.4, coinFriction: 0.45, wallFriction: 0.25,
+    coinScale: 3.2, coinFriction: 0.45, wallFriction: 0.25,
     interval: 0.22, spawnHeight: 50,
     calmSpeed: 0.15, calmTime: 0.3, maxSettle: 6,
   },
+
+  /**
+   * Tamaño de las monedas en los vasos que no usan `solids.coinScale` (v0.15.0). La botella va al
+   * revés que los demás: las monedas grandes se atascan en el cuello y la ronda se acaba enseguida
+   * (×2.4: 1,6 vueltas; ×3.2: 0,7 y el 30 % lo pierde el primero; ×2.0: 5,0). Es muy sensible.
+   */
+  coinScaleByVessel: { botella: 2.0 } as Record<string, number>,
 
   /**
    * Vaso con fuga (v0.10.0): agujero a `height` (1 = borde). Mientras se pasa el móvil (pantalla
    * «Turno de X») se escapa `rate` por segundo (volumen de vaso recto), como mucho `maxPerTurn`
    * por pase y nunca por debajo del agujero. Con piezas, `sizePx` es el hueco en la pared (px del
    * motor): caben las canicas pequeñas y alguna moneda; las que salen por ahí no eliminan.
+   * maxPerTurn 0.015 (era 0.08, v0.15.0): tiene que ser menos de lo que echa un toque (~0.035);
+   * con 0.08 quien solo tocaba nunca llenaba y la ronda no acababa (simulador, 23-10-2026).
    */
-  leak: { height: 0.45, rate: 0.05, maxPerTurn: 0.08, sizePx: 30 },
+  leak: { height: 0.45, rate: 0.05, maxPerTurn: 0.015, sizePx: 30 },
 
   /**
    * Esmerilado (v0.11.0): el cristal grueso deforma y el nivel se ve desplazado `maxOffset`

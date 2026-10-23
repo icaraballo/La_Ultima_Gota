@@ -92,6 +92,10 @@ export class Game {
   private lastDropAt = 0;
   /** Turnos ya jugados en esta ronda (la leche se calienta con ellos). */
   private turnsThisRound = 0;
+  /** Lo que se ha escapado por la fuga en este pase de móvil (tiene tope). */
+  private leakedThisPass = 0;
+  /** Se está escapando líquido por la fuga ahora mismo (para dibujar el chorrito). */
+  leaking = false;
   /** Lo que duró la última pulsación (s), para el modo depuración. */
   lastHeld = 0;
 
@@ -140,6 +144,8 @@ export class Game {
   ready() {
     if (this.phase !== 'turno') return;
     this.phase = 'echando';
+    this.leaking = false;
+    this.leakedThisPass = 0;
     this.pouredThisTurn = 0;
     this.pressedAt = null;
     this.pressStartedAt = null;
@@ -214,6 +220,18 @@ export class Game {
       const arrived = this.faucet.step(dt);
       this.glass.step(dt);
       this.glass.add(arrived, this.faucet.arrivedFoam);
+      // Vaso con fuga: mientras se pasa el móvil se escapa, con tope por pase y hasta el agujero.
+      this.leaking = false;
+      if (this.glass.vessel.leaks && this.phase === 'turno') {
+        const { leak } = cfg;
+        const floor = this.glass.vessel.heightToVolume(leak.height);
+        const quiere = Math.min(leak.rate * dt, leak.maxPerTurn - this.leakedThisPass);
+        if (quiere > 0) {
+          const sale = this.glass.leak(quiere, floor);
+          this.leakedThisPass += sale;
+          this.leaking = sale > 0;
+        }
+      }
       // Leche al fuego: sube sola mientras el jugador duda o echa, cada turno un poco más rápido.
       const { rise, riseGrow } = this.glass.liquid;
       if (rise > 0 && this.phase === 'echando' && !this.poured) {

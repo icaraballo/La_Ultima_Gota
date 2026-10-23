@@ -263,6 +263,10 @@ export class Escena3D {
   private outRingMat = basic('#e8735f');
   private color = new THREE.Color();
 
+  /** Vaso con fuga: el agujero (un disco de tinta en el cristal) y el chorrito que sale. */
+  private hole = new THREE.Mesh(new THREE.CircleGeometry(0.07, 18), basic('#140B08'));
+  private leakMat = basic('#4FA9E6');
+  private leakStream = new THREE.Mesh(new THREE.BufferGeometry(), this.leakMat);
   private limitRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.01, 6, SEGMENTS), basic('#e8735f'));
 
   private vessel: Vessel | null = null;
@@ -399,7 +403,7 @@ export class Escena3D {
       ...this.foamDots, this.bubbles, this.drops, this.dropsInk, this.dropsHi, this.stream, this.streamInk,
       this.streamHi, this.bits, this.bitsInk, ...this.ripples, ...this.rivers, ...this.riversInk,
       this.puddleInk, this.puddle, this.puddleHi, this.glass, ...this.glassHi, this.glassLine,
-      this.rimInk, this.rim, this.limitRing);
+      this.rimInk, this.rim, this.limitRing, this.hole, this.leakStream);
     this.setTema('noche');
   }
 
@@ -654,6 +658,21 @@ export class Escena3D {
       m.position.y = GH;
     }
 
+    // Agujero del vaso con fuga, girado hacia la derecha para que se vea de frente a medias.
+    this.hole.visible = v.leaks;
+    this.leakStream.visible = false;
+    if (v.leaks) {
+      const fi = 0.75, h = config.leak.height;
+      const n = new THREE.Vector3(Math.sin(fi), 0, Math.cos(fi));
+      const p = n.clone().multiplyScalar(R * v.radius(h) * GLASS + 0.004).setY(GH * h);
+      this.hole.position.copy(p);
+      this.hole.lookAt(p.clone().add(n));
+      const fin = p.clone().add(n.clone().multiplyScalar(0.5)).setY(-0.02);
+      const curva = new THREE.QuadraticBezierCurve3(p, p.clone().add(n.clone().multiplyScalar(0.3)), fin);
+      this.leakStream.geometry.dispose();
+      this.leakStream.geometry = new THREE.TubeGeometry(curva, 20, 2.4 * PX, 6, false);
+    }
+
     const sr = R * v.radius(0) * 1.25 + 0.16;
     this.shadow.scale.set(sr, sr * 0.75, 1);
     this.lastLiquid = this.lastFoamTop = this.lastSurfR = this.lastDome = -1;
@@ -720,6 +739,7 @@ export class Escena3D {
     this.lineMat.color.set(l.linea);
     this.glossMat.color.set(l.reflejo);
     this.puddleMat.color.set(l.cuerpo);
+    this.leakMat.color.set(l.cuerpo);
     this.foamDotMat.color.set(l.espumaSombra ?? l.linea);
     this.bubbleMat.color.set(l.burbujas ?? l.linea);
     for (const m of this.rippleMats) m.color.set(l.linea);
@@ -1005,6 +1025,8 @@ export class Escena3D {
       this.puddle.visible = this.puddleInk.visible = this.puddleHi.visible = false;
       this.puddle.userData.r = -1;
     }
+
+    this.leakStream.visible = game.leaking;
 
     // Depuración: el límite oculto de la ronda.
     this.limitRing.visible = this.showLimit;

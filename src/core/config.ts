@@ -69,6 +69,14 @@ export const config = {
     calmSpeed: 0.15, calmTime: 0.3, maxSettle: 6,
   },
 
+  /**
+   * Vaso con fuga (v0.10.0): agujero a `height` (1 = borde). Mientras se pasa el móvil (pantalla
+   * «Turno de X») se escapa `rate` por segundo (volumen de vaso recto), como mucho `maxPerTurn`
+   * por pase y nunca por debajo del agujero. Con piezas, `sizePx` es el hueco en la pared (px del
+   * motor): caben las canicas pequeñas y alguna moneda; las que salen por ahí no eliminan.
+   */
+  leak: { height: 0.45, rate: 0.05, maxPerTurn: 0.08, sizePx: 30 },
+
   liquids: {
     agua: { flowMul: 1, inertia: 0.15, meniscus: 0.025, foamPerFlow: 0, foamDecay: 0.5, rise: 0, riseGrow: 0 },
     aceite: { flowMul: 0.8, inertia: 0.35, meniscus: 0.008, foamPerFlow: 0, foamDecay: 0.5, rise: 0, riseGrow: 0 },

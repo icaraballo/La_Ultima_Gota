@@ -1,3 +1,4 @@
+import { config } from '../core/config';
 import type { Game } from '../core/game';
 import { SOLID_PX_PER_H, SOLID_PX_RADIUS } from '../core/solids';
 import { SOLIDOS, TEMAS, type TemaId } from './temas';
@@ -59,6 +60,23 @@ export class Barra2D {
     // Mesa
     ctx.fillStyle = '#8a5a3b';
     ctx.fillRect(0, mesaY, w, h - mesaY);
+
+    // Vaso con fuga: el agujero en la pared derecha y, si se escapa, el chorrito hasta la mesa.
+    if (glass.vessel.leaks) {
+      const hy = mesaY - config.leak.height * gh;
+      if (game.leaking) {
+        ctx.strokeStyle = AGUA;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(right, hy);
+        ctx.quadraticCurveTo(right + 30, hy, right + 40, mesaY);
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#140B08';
+      ctx.beginPath();
+      ctx.arc(right, hy, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // Líquido dentro del vaso, con ondulación según lo que cae.
     if (glass.volume > 0) {

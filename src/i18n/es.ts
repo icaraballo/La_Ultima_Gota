@@ -11,6 +11,8 @@ const infoVasos = {
   pecera: { texto: 'Panza ancha y boca estrecha. A medio llenar parece que falta muchísimo; en la boca, cada toque sube un montón.', nota: 'Cuidado: la boca.' },
   tarta: { texto: 'Tres pisos, cada uno más estrecho que el de abajo. Al pasar de piso, lo mismo sube el doble de rápido, y el último se llena en nada.', nota: 'Cuidado: el salto de piso.' },
   chupito: { texto: 'Pequeño y bajo: se llena en una o dos vueltas.', nota: 'Para una rápida.' },
+  // v0.10.0: propuesto el 23-10-2026, pendiente de revisar jugando.
+  fuga: { texto: 'Tiene un agujero a media altura. Mientras os pasáis el móvil se va escapando un poco, hasta el agujero. Las canicas pequeñas y alguna moneda también se cuelan.', nota: 'Tardar en pasarlo ayuda al siguiente.' },
 };
 const infoLiquidos = {
   agua: { texto: 'La de referencia. Corta casi en seco al soltar y se abomba un poco sobre el borde antes de rebosar.', nota: '' },
@@ -42,7 +44,7 @@ export const es = {
   liquido: 'Qué se echa',
   vasoYContenido: 'Vaso y qué se echa',
   azarTexto: 'Se sortea al empezar la partida.',
-  vasos: { cilindro: 'Recto', copa: 'Copa', botella: 'Botella', pecera: 'Pecera', tarta: 'Tarta', chupito: 'Chupito', aleatorio: 'Azar' },
+  vasos: { cilindro: 'Recto', copa: 'Copa', botella: 'Botella', pecera: 'Pecera', tarta: 'Tarta', chupito: 'Chupito', fuga: 'Con fuga', aleatorio: 'Azar' },
   liquidos: { agua: 'Agua', aceite: 'Aceite', cerveza: 'Cerveza', leche: 'Leche al fuego', canicas: 'Canicas', monedas: 'Monedas', aleatorio: 'Azar' },
   vasoAzar: 'Vaso al azar',
   liquidoAzar: 'Qué se echa, al azar',

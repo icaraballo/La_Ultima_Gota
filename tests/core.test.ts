@@ -6,6 +6,7 @@ import { Glass } from '../src/core/glass-state';
 import { getLiquid } from '../src/core/liquids';
 import { Faucet } from '../src/core/pour';
 import { createRng } from '../src/core/rng';
+import { Pile } from '../src/core/solids';
 import { getVessel, makeVessel, VESSEL_IDS } from '../src/core/vessels';
 
 const DT = 1 / config.stepsPerSecond;
@@ -424,7 +425,7 @@ describe('contenido: vasos, líquidos y espuma', () => {
     expect(`${g.vesselId}:${g.contentId}`).not.toBe(anterior);
   });
 
-  it('las 36 combinaciones se juegan hasta un ganador', () => {
+  it('las 42 combinaciones se juegan hasta un ganador', () => {
     for (const vessel of VESSEL_IDS) {
       for (const liquid of CONTENT_IDS) {
         const g = new Game(['A', 'B', 'C'], { seed: 5, vessel, content: liquid }, rapido);
@@ -552,5 +553,52 @@ describe('leche al fuego (v0.9.0)', () => {
     for (let i = 0; i < 60 * 600 && g.phase === 'echando'; i++) g.step(dt);
     expect(g.phase).toBe('desborde');
     expect(g.loser).toBe(0);
+  });
+});
+
+describe('vaso con fuga (v0.10.0)', () => {
+  const dt = 1 / 60;
+  /** Vaso con fuga a ~80 %: un chorro y a esperar a que pase el turno. */
+  const lleno = () => {
+    const g = new Game(['A', 'B'], { seed: 3, vessel: 'fuga' });
+    g.ready();
+    g.glass.add(0.8);
+    g.press(); g.release();
+    for (let i = 0; i < 600 && g.phase === 'echando'; i++) g.step(dt);
+    expect(g.phase).toBe('turno');
+    return g;
+  };
+
+  it('mientras se pasa el móvil se escapa, con tope por pase', () => {
+    const g = lleno();
+    const antes = g.glass.volume;
+    g.step(dt);
+    expect(g.leaking).toBe(true);
+    for (let i = 0; i < 60 * 20; i++) g.step(dt);
+    expect(antes - g.glass.volume).toBeCloseTo(config.leak.maxPerTurn, 3);
+    expect(g.leaking).toBe(false);
+  });
+
+  it('no baja del agujero ni se escapa durante el turno', () => {
+    const g = new Game(['A', 'B'], { seed: 3, vessel: 'fuga' });
+    g.ready();
+    g.glass.add(0.47);
+    const v = g.glass.volume;
+    for (let i = 0; i < 120; i++) g.step(dt);
+    expect(g.glass.volume).toBeGreaterThanOrEqual(v); // echando: nada
+    const floor = g.glass.vessel.heightToVolume(config.leak.height);
+    g.glass.leak(1, floor);
+    expect(g.glass.volume).toBeCloseTo(floor, 6);
+  });
+
+  it('las canicas pequeñas se cuelan por el agujero sin eliminar a nadie', () => {
+    const cfg = { ...config, solids: { ...config.solids, marbleMin: 9, marbleMax: 11 } };
+    const pile = new Pile('canicas', getVessel('fuga'), createRng(4), cfg);
+    for (let i = 0; i < 60 * 30 && !pile.pieces.some(p => p.escaped); i++) {
+      if (i % 8 === 0) pile.drop();
+      pile.step(dt);
+    }
+    expect(pile.pieces.some(p => p.escaped)).toBe(true);
+    if (pile.out) expect(pile.out.escaped).toBeFalsy();
   });
 });

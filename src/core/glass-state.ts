@@ -57,6 +57,14 @@ export class Glass {
     }
   }
 
+  /** Se escapa líquido por un agujero (en vasos rectos), sin bajar del volumen `floor` (de este
+   * vaso). Devuelve lo que se ha escapado, en vasos rectos. */
+  leak(v: number, floor: number) {
+    const sale = Math.max(0, Math.min(v / this.vessel.capacity, this.volume - floor));
+    this.volume -= sale;
+    return sale * this.vessel.capacity;
+  }
+
   /** La espuma se asienta. */
   step(dt: number) {
     if (this.foam > 0) this.foam = settleFoam(this.foam, this.liquid.foamDecay, dt);

@@ -2,8 +2,8 @@
 // El nivel se calcula integrando el área, así que el mismo volumen sube distinto en cada
 // forma. El perfil servirá también para la geometría 3D (LatheGeometry, fase 3).
 
-export type VesselId = 'cilindro' | 'copa' | 'botella' | 'pecera' | 'tarta' | 'chupito';
-export const VESSEL_IDS: VesselId[] = ['cilindro', 'copa', 'botella', 'pecera', 'tarta', 'chupito'];
+export type VesselId = 'cilindro' | 'copa' | 'botella' | 'pecera' | 'tarta' | 'chupito' | 'fuga';
+export const VESSEL_IDS: VesselId[] = ['cilindro', 'copa', 'botella', 'pecera', 'tarta', 'chupito', 'fuga'];
 
 export interface Vessel {
   id: string;
@@ -12,6 +12,8 @@ export interface Vessel {
   /** Cuánto cabe hasta el borde respecto al recto (1): lo echado se divide por esto, así que
    * en el chupito cada gota sube mucho más. Sale del perfil y del alto. */
   capacity: number;
+  /** Tiene un agujero en la pared (vaso con fuga); la altura está en config.leak. */
+  leaks: boolean;
   /** Radio respecto al del recto, a la altura h ∈ [0, 1]. */
   radius(h: number): number;
   /** Altura del líquido (1 = borde) para un volumen (1 = lleno hasta el borde). */
@@ -21,7 +23,7 @@ export interface Vessel {
 
 const SAMPLES = 256;
 
-export function makeVessel(id: string, radius: (h: number) => number, height = 1): Vessel {
+export function makeVessel(id: string, radius: (h: number) => number, height = 1, leaks = false): Vessel {
   // Volumen acumulado V(h) = ∫ r² dh, por trapecios, normalizado a 1 en el borde.
   const acc = new Float64Array(SAMPLES + 1);
   for (let i = 1; i <= SAMPLES; i++) {
@@ -38,6 +40,7 @@ export function makeVessel(id: string, radius: (h: number) => number, height = 1
     id,
     height,
     capacity: total * height,
+    leaks,
     radius,
     volumeToHeight(v) {
       if (v <= 0) return 0;
@@ -84,6 +87,8 @@ const vessels: Record<VesselId, Vessel> = {
   tarta: makeVessel('tarta', h => (h < 84 / 250 ? 100 : h < 167 / 250 ? 70 : 42) / 77.5),
   // Chupito: 100 px de alto (0,4 del recto) y de 46 a 56 de medio ancho. Cabe ~1/6 del recto.
   chupito: makeVessel('chupito', h => (46 + 10 * h) / 77.5, 0.4),
+  // Con fuga (v0.10.0): un recto con un agujero a media altura (config.leak).
+  fuga: makeVessel('fuga', () => 1, 1, true),
 };
 
 export function getVessel(id: VesselId): Vessel {

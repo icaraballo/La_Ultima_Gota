@@ -36,6 +36,8 @@ export interface Piece {
   /** Canica: radio. Moneda: ancho (diámetro) y alto (grosor), en px del motor. */
   w: number;
   h: number;
+  /** Se ha colado por el agujero del vaso con fuga: está fuera, pero no elimina a nadie. */
+  escaped?: boolean;
   /** Posición y giro en coordenadas del vaso: x desde el eje, y hacia arriba desde el fondo. */
   x: number;
   y: number;
@@ -54,6 +56,8 @@ export class Pile {
   private calmFor = 0;
   /** Alto de este vaso en px del motor (el chupito es más bajo). */
   private readonly hPx: number;
+  /** Alturas (px) entre las que la pared derecha tiene el agujero, o null. */
+  private readonly holeBand: [number, number] | null;
 
   constructor(readonly kind: SolidId, readonly vessel: Vessel, private rng: Rng, private cfg: Config) {
     const s = cfg.solids;
@@ -71,9 +75,14 @@ export class Pile {
     right.reverse();
     // Paredes: un rectángulo por tramo del perfil, por fuera de la línea del cristal.
     const walls: Matter.Body[] = [];
+    // Vaso con fuga: en la pared derecha falta un tramo a la altura del agujero.
+    const hole = vessel.leaks ? cfg.leak.height * this.hPx : null;
+    this.holeBand = hole === null ? null : [hole - cfg.leak.sizePx / 2, hole + cfg.leak.sizePx / 2];
     for (const [side, pts] of [[-1, left], [1, right]] as const) {
       for (let i = 0; i < N; i++) {
         const a = pts[i], b = pts[i + 1];
+        const yMid = (a.y + b.y) / 2;
+        if (side === 1 && this.holeBand && yMid > this.holeBand[0] && yMid < this.holeBand[1]) continue;
         const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
         // Normal hacia fuera del vaso (en coordenadas con y hacia arriba).
         const nx = side * dy / len, ny = -side * dx / len;
@@ -132,7 +141,12 @@ export class Pile {
       p.y = -p.body.position.y;
       p.angle = -p.body.angle;
       if (p.body.speed > this.cfg.solids.calmSpeed || Math.abs(p.body.angularSpeed) > 0.03) calm = false;
-      if (!this.out && this.isOutside(p)) this.out = p;
+      if (!this.out && !p.escaped && this.isOutside(p)) {
+        // Si sale por primera vez a la altura del agujero, se ha colado: no cuenta como desborde.
+        const b = this.holeBand;
+        if (b && p.x > 0 && p.y > b[0] - p.h && p.y < b[1] + p.h) p.escaped = true;
+        else this.out = p;
+      }
     }
     this.calmFor = calm ? this.calmFor + dt : 0;
   }

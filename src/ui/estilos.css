@@ -121,6 +121,17 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
 .elegir-info em { color: var(--suave); }
 .check { display: flex; gap: 10px; align-items: center; min-height: 44px; color: var(--suave); font-size: 15px; }
 .check input { width: 22px; height: 22px; flex: none; accent-color: var(--acento); }
+/* Tiempo por turno: la casilla y, si está marcada, los segundos al lado. */
+.fila-tiempo { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.segmentos { display: flex; gap: 6px; }
+.segmento {
+  min-width: 60px; min-height: 44px; padding: 0 12px; border-radius: 14px; font-size: 15px; font-weight: 500;
+  border: 2px solid var(--panel-borde); background: var(--panel); color: var(--texto);
+}
+.segmento.elegida {
+  background: var(--acento); color: var(--acento-texto); border-color: var(--tinta);
+  font-weight: 600; box-shadow: 0 3px 0 var(--tinta);
+}
 
 .boton {
   font-size: 18px; font-weight: 600; padding: 12px 20px; min-height: 50px;
@@ -139,12 +150,22 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
 .juego { padding-left: 0; padding-right: 0; gap: 0; user-select: none; -webkit-user-select: none; }
 /* Los nombres largos sin espacios (16 «W») parten donde haga falta en vez de salirse (UB-06). */
 .cabecera {
+  position: relative;
   min-height: 72px; flex: none; padding: 0 16px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
 }
 .turno-de { display: flex; align-items: center; gap: 10px; font-size: 28px; font-weight: 700; line-height: 1.1; }
 .turno-de .punto { width: 14px; height: 14px; border: 2px solid var(--tinta); flex: none; }
 .turno-de span:last-child { min-width: 0; overflow-wrap: anywhere; text-align: center; }
+/* Cuenta atrás del tiempo por turno: arriba a la derecha, en rojo los tres últimos. */
+.reloj {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  width: 46px; height: 46px; border-radius: 23px; display: grid; place-items: center;
+  border: 3px solid var(--panel-borde); background: var(--panel);
+  font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.cabecera:has(.reloj:not([hidden])) { padding: 0 66px; }
+.reloj.apurado { border-color: var(--tinta); background: var(--peligro); color: #fff; }
 .despues { font-size: 15px; color: var(--suave); max-width: 100%; overflow-wrap: anywhere; text-align: center; }
 #j-vaso { flex: 1; min-height: 0; width: 100%; display: block; }
 
@@ -169,6 +190,24 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
   padding: 24px 16px; text-align: center;
 }
 .capa.turno, .capa.fin { background: var(--fondo); }
+/* Final: ganador, resumen y botones; con muchos nombres largos puede no caber y hace scroll. */
+.capa.fin { justify-content: safe center; overflow-y: auto; gap: 14px; padding-top: max(24px, var(--sa-arriba)); padding-bottom: max(24px, var(--sa-abajo)); }
+.resumen { width: 100%; max-width: 380px; text-align: left; }
+.resumen h2 { margin: 0 0 8px; text-align: center; }
+.resumen ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.stat {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  background: var(--panel); border: 2px solid var(--panel-borde); border-radius: 16px;
+}
+.stat-icono { flex: none; width: 32px; text-align: center; font-size: 24px; }
+.stat-texto { flex: 1; min-width: 0; font-size: 16px; }
+.stat-texto small { display: block; font-size: 13px; color: var(--suave); }
+.stat-quien {
+  flex: none; max-width: 45%; display: flex; align-items: center; gap: 6px;
+  font-weight: 600; font-size: 16px; overflow-wrap: anywhere; text-align: right;
+}
+.fin-botones { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.fin-botones .check { margin-bottom: 6px; }
 .capa.desborde { background: transparent; justify-content: flex-end; padding-bottom: max(24px, var(--sa-abajo)); }
 .capa .boton { min-width: 220px; }
 .grande { font-size: 36px; font-weight: 700; line-height: 1.15; max-width: 100%; overflow-wrap: anywhere; }

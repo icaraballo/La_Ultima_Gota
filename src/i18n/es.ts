@@ -51,6 +51,9 @@ export const es = {
   vasoAzar: 'Vaso al azar',
   liquidoAzar: 'Qué se echa, al azar',
   empezarAleatorio: 'Empezar en orden aleatorio',
+  tiempoPorTurno: 'Tiempo por turno',
+  segundos: (n: number) => `${n} s`,
+  segundosParaEchar: (n: number) => `Quedan ${n} segundos para echar`,
   combinacion: (liquido: string, vaso: string) => `${liquido} · ${vaso}`,
 
   turnoDe: (nombre: string) => `Turno de ${nombre}`,
@@ -70,6 +73,16 @@ export const es = {
   verGanador: 'Ver ganador',
   gana: (nombre: string) => `¡Gana ${nombre}!`,
   revancha: 'Revancha',
+  // Resumen del final (§7.2). Sin números: solo quién.
+  resumenTitulo: 'La partida en datos',
+  statGeneroso: 'Más generoso',
+  statGenerosoTexto: 'Quien más echaba en cada turno',
+  statRata: 'Más rata',
+  statRataTexto: 'Quien menos echaba',
+  statLimite: 'Al límite',
+  statLimiteTexto: 'Dejó el vaso más a punto de rebosar y se salvó',
+  statIndeciso: 'Más indeciso',
+  statIndecisoTexto: 'Quien más tardaba en empezar a echar',
   cambiarJugadores: 'Cambiar jugadores',
 
   info: 'Vasos y líquidos',

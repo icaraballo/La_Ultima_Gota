@@ -1,7 +1,8 @@
 import { CONTENT_IDS } from '../src/core/contents';
 import { describe, expect, it } from 'vitest';
 import { config } from '../src/core/config';
-import { Game } from '../src/core/game';
+import { Game, type TurnRecord } from '../src/core/game';
+import { computeStats } from '../src/core/stats';
 import { Glass } from '../src/core/glass-state';
 import { getLiquid } from '../src/core/liquids';
 import { Faucet } from '../src/core/pour';
@@ -625,5 +626,113 @@ describe('esmerilado (v0.11.0)', () => {
     g.add(0.5);
     expect(g.illusion).toBe(0);
     expect(g.shownHeight).toBe(g.height);
+  });
+});
+
+describe('tiempo por turno (v0.12.0)', () => {
+  const pasos = (s: number) => Math.round(s / DT);
+
+  it('sin límite, se puede esperar lo que haga falta', () => {
+    const g = new Game(['Ana', 'Luis'], { seed: 1 });
+    g.ready();
+    expect(g.timeLeft).toBeNull();
+    for (let i = 0; i < pasos(30); i++) g.step(DT);
+    expect(g.phase).toBe('echando');
+    expect(g.poured).toBe(false);
+  });
+
+  it('cuenta atrás desde «¡Listo!» y, al agotarse, cae una gota sola', () => {
+    const g = new Game(['Ana', 'Luis'], { seed: 1, turnTime: 5 });
+    expect(g.timeLeft).toBeNull(); // aún en «Turno de X»
+    g.ready();
+    expect(g.timeLeft).toBe(5);
+    for (let i = 0; i < pasos(4.9); i++) g.step(DT);
+    expect(g.poured).toBe(false);
+    for (let i = 0; i < pasos(0.2); i++) g.step(DT);
+    expect(g.poured).toBe(true);
+    expect(g.timeLeft).toBeNull();
+    for (let i = 0; i < pasos(config.fallTime + config.turnEndDelay + 0.5); i++) g.step(DT);
+    expect(g.phase).toBe('turno');
+    expect(g.glass.volume).toBeGreaterThan(0);
+    expect(g.glass.volume).toBeLessThan(config.dropVolume * 3 * 1.3 + 1e-9);
+    expect(g.history[0].timedOut).toBe(true);
+  });
+
+  it('si empieza a tiempo, el reloj se para aunque mantenga más', () => {
+    const g = new Game(['Ana', 'Luis'], { seed: 1, turnTime: 5 });
+    g.ready();
+    for (let i = 0; i < pasos(4); i++) g.step(DT);
+    g.press();
+    for (let i = 0; i < pasos(2); i++) g.step(DT);
+    expect(g.timeLeft).toBeNull();
+    expect(g.pressing).toBe(true);
+    g.release();
+    expect(g.history).toHaveLength(0);
+  });
+
+  it('con piezas, se agota y cae una', () => {
+    const g = new Game(['Ana', 'Luis'], { seed: 1, content: 'canicas', turnTime: 5 });
+    g.ready();
+    for (let i = 0; i < pasos(5.1); i++) g.step(DT);
+    expect(g.poured).toBe(true);
+    expect(g.pile!.pieces).toHaveLength(1);
+  });
+});
+
+describe('estadísticas del final (v0.12.0)', () => {
+  const turno = (round: number, player: number, poured: number, extra: Partial<TurnRecord> = {}): TurnRecord =>
+    ({ round, player, poured, volumeAfter: 0, hesitation: 1, held: 0, overflowed: false, danger: 0.5, timedOut: false, ...extra });
+
+  it('generoso y rata se comparan dentro de cada ronda', () => {
+    // Ronda 1 de agua (volúmenes pequeños) y ronda 2 de monedas (piezas): Ana echa el doble que
+    // Luis en las dos, aunque en piezas los números sean mucho mayores.
+    const s = computeStats([
+      turno(1, 0, 0.2), turno(1, 1, 0.1),
+      turno(2, 0, 10), turno(2, 1, 5),
+    ]);
+    expect(s.generoso?.player).toBe(0);
+    expect(s.rata?.player).toBe(1);
+  });
+
+  it('al límite: el que más cerca se quedó sin desbordar; el desborde no cuenta', () => {
+    const s = computeStats([
+      turno(1, 0, 0.1, { danger: 0.9 }),
+      turno(1, 1, 0.1, { danger: 0.97 }),
+      turno(1, 2, 0.5, { danger: 1, overflowed: true }),
+    ]);
+    expect(s.alLimite?.player).toBe(1);
+  });
+
+  it('con piezas no hay «al límite»', () => {
+    expect(computeStats([turno(1, 0, 3, { danger: null }), turno(1, 1, 2, { danger: null })]).alLimite).toBeNull();
+  });
+
+  it('indeciso: quien más tarda de media', () => {
+    const s = computeStats([
+      turno(1, 0, 0.1, { hesitation: 1 }), turno(1, 1, 0.1, { hesitation: 4 }),
+      turno(1, 0, 0.1, { hesitation: 6 }), turno(1, 1, 0.1, { hesitation: 2 }),
+    ]);
+    expect(s.indeciso?.player).toBe(0);
+  });
+
+  it('todos iguales: no hay un rata distinto del generoso', () => {
+    const s = computeStats([turno(1, 0, 0.1), turno(1, 1, 0.1)]);
+    expect(s.rata).toBeNull();
+  });
+
+  it('una partida de verdad da resumen', () => {
+    const g = new Game(['Ana', 'Luis', 'Eva'], { seed: 3 });
+    let n = 0;
+    while (g.phase !== 'fin' && n++ < 200000) {
+      if (g.phase === 'turno') g.ready();
+      else if (g.phase === 'desborde') g.continue();
+      else if (g.phase === 'echando' && !g.poured && !g.pressing) g.press();
+      else if (g.pressing && g.time > 0) g.release();
+      g.step(DT);
+    }
+    expect(g.phase).toBe('fin');
+    const s = computeStats(g.history);
+    expect(s.generoso).not.toBeNull();
+    expect(s.indeciso).not.toBeNull();
   });
 });

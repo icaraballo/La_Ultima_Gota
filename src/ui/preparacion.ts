@@ -2,7 +2,7 @@ import { config } from '../core/config';
 import { CONTENT_IDS, type ContentId } from '../core/contents';
 import { VESSEL_IDS, type VesselId } from '../core/vessels';
 
-// Lo que se recuerda de la última partida (nombres, vaso, contenido y orden). Viene de
+// Lo que se recuerda de la última partida (nombres, vaso, contenido, orden y tiempo por turno). Viene de
 // localStorage, así que puede llegar cualquier cosa: todo pasa por sanearPreparacion().
 // Sin DOM, para poder probarlo en Node.
 
@@ -16,7 +16,12 @@ export interface Preparacion {
   liquid: ContentId | 'aleatorio';
   /** «Empezar en orden aleatorio»: se baraja una vez al crear la partida. */
   randomOrder: boolean;
+  /** Tiempo por turno en segundos (0 = sin límite, el de serie). */
+  turnTime: number;
 }
+
+/** Tiempos por turno que se pueden elegir (§3.4). El primero es el que se pone al activarlo. */
+export const TIEMPOS = [10, 5] as const;
 
 const VASOS: readonly string[] = [...VESSEL_IDS, 'aleatorio'];
 const CONTENIDOS: readonly string[] = [...CONTENT_IDS, 'aleatorio'];
@@ -34,5 +39,6 @@ export function sanearPreparacion(raw: unknown): Preparacion {
     vessel: VASOS.includes(p.vessel as string) ? (p.vessel as Preparacion['vessel']) : 'cilindro',
     liquid: CONTENIDOS.includes(p.liquid as string) ? (p.liquid as Preparacion['liquid']) : 'agua',
     randomOrder: p.randomOrder === true,
+    turnTime: (TIEMPOS as readonly unknown[]).includes(p.turnTime) ? (p.turnTime as number) : 0,
   };
 }

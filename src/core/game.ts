@@ -42,6 +42,10 @@ export interface TurnRecord {
   /** Segundos que mantuvo pulsado. */
   held: number;
   overflowed: boolean;
+  /** Lo cerca que quedó de desbordar, de 0 a 1 (null con canicas o monedas). */
+  danger: number | null;
+  /** Se le acabó el tiempo y la gota cayó sola. */
+  timedOut: boolean;
 }
 
 export interface GameOptions {
@@ -52,6 +56,9 @@ export interface GameOptions {
   content?: ContentId | 'aleatorio';
   /** Barajar el orden de la lista una sola vez, al crear la partida. */
   randomOrder?: boolean;
+  /** Segundos para empezar a echar desde «¡Listo!» (0 o nada = sin límite). Si se agotan, cae
+   * una gota sola (o una pieza): saltarse el turno sería un premio por esperar. */
+  turnTime?: number;
 }
 
 const combo = (v: VesselId, c: ContentId) => `${v}:${c}`;
@@ -80,6 +87,8 @@ export class Game {
   readonly history: TurnRecord[] = [];
   /** Combinaciones de vaso y líquido ya jugadas en esta partida («copa:agua»). */
   readonly played = new Set<string>();
+  /** Tiempo por turno (s); 0 = sin límite. */
+  readonly turnTime: number;
 
   private rng: Rng;
   private pressedAt: number | null = null;
@@ -94,6 +103,7 @@ export class Game {
   private turnsThisRound = 0;
   /** Lo que se ha escapado por la fuga en este pase de móvil (tiene tope). */
   private leakedThisPass = 0;
+  private timedOut = false;
   /** Se está escapando líquido por la fuga ahora mismo (para dibujar el chorrito). */
   leaking = false;
   /** Lo que duró la última pulsación (s), para el modo depuración. */
@@ -106,6 +116,7 @@ export class Game {
     this.players = names.map(name => ({ name, alive: true }));
     this.rng = createRng(options.seed);
     const list = names.map((_, i) => i);
+    this.turnTime = options.turnTime ?? 0;
     this.baseOrder = options.randomOrder ? this.rng.shuffle(list) : list;
     const { vessel = 'cilindro', content = 'agua' } = options;
     this.vesselId = vessel === 'aleatorio' ? VESSEL_IDS[Math.floor(this.rng.next() * VESSEL_IDS.length)] : vessel;
@@ -140,6 +151,12 @@ export class Game {
     return this.pressedAt !== null;
   }
 
+  /** Segundos que le quedan para empezar a echar, o null si no hay límite o ya ha empezado. */
+  get timeLeft(): number | null {
+    if (!this.turnTime || this.phase !== 'echando' || this.pressStartedAt !== null) return null;
+    return Math.max(0, this.turnTime - (this.time - this.turnStartedAt));
+  }
+
   /** «¡Listo!» en la pantalla de turno. */
   ready() {
     if (this.phase !== 'turno') return;
@@ -151,6 +168,7 @@ export class Game {
     this.pressStartedAt = null;
     this.releasedAt = null;
     this.quietSince = null;
+    this.timedOut = false;
     this.turnStartedAt = this.time;
   }
 
@@ -200,6 +218,13 @@ export class Game {
   step(dt: number) {
     this.time += dt;
     const { cfg } = this;
+
+    // Se acabó el tiempo sin empezar: cae una gota sola (un toque).
+    if (this.timeLeft === 0) {
+      this.timedOut = true;
+      this.press();
+      this.release();
+    }
 
     const holding = this.phase === 'echando' && this.pressedAt !== null && !this.poured
       && (this.time - this.pressedAt) * 1000 >= cfg.tapThresholdMs;
@@ -302,6 +327,8 @@ export class Game {
       hesitation: (this.pressStartedAt ?? this.time) - this.turnStartedAt,
       held: this.releasedAt !== null ? this.lastHeld : this.time - (this.pressStartedAt ?? this.time),
       overflowed,
+      danger: this.pile ? null : this.glass.danger,
+      timedOut: this.timedOut,
     });
   }
 }

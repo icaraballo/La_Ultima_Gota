@@ -1,5 +1,6 @@
 import { config } from '../core/config';
 import { Game, type GameOptions, type Phase } from '../core/game';
+import { computeStats } from '../core/stats';
 import { CONTENT_IDS, isSolid, type ContentId } from '../core/contents';
 import { LIQUID_IDS, type LiquidId } from '../core/liquids';
 import { SOLID_IDS, type SolidId } from '../core/solids';
@@ -13,11 +14,11 @@ import { esc } from './html';
 import { iconos } from './iconos';
 import { botonOpinar, createOpinion, type DatosOpinion } from './opinion';
 import { mantenerVertical } from './orientacion';
-import { MAX_NOMBRE, sanearPreparacion, type Preparacion } from './preparacion';
+import { MAX_NOMBRE, sanearPreparacion, TIEMPOS, type Preparacion } from './preparacion';
 
-// Pantallas: jugadores (con vaso y líquido, y la hoja ⓘ), «Turno de X», el vaso, eliminado y
-// ganador.
-// El resto del flujo (resumen, cómo jugar, ajustes) es la fase 4.
+// Pantallas: jugadores (con vaso y líquido, opciones y la hoja ⓘ), «Turno de X», el vaso,
+// eliminado y el final (ganador, resumen y revancha). Sin «Cómo jugar» (decisión del 23-10-2026);
+// los ajustes de sonido y vibración llegan con ellos, en la fase 6.
 
 const DT = 1 / config.stepsPerSecond;
 
@@ -65,6 +66,7 @@ export function startApp(root: HTMLElement) {
     <section class="pantalla" id="p-jugadores"></section>
     <section class="pantalla juego" id="p-juego" hidden>
       <header class="cabecera">
+        <div class="reloj" id="j-reloj" hidden></div>
         <div class="turno-de" id="j-turno"></div>
         <div class="despues" id="j-despues"></div>
       </header>
@@ -171,6 +173,12 @@ export function startApp(root: HTMLElement) {
       ${selector('vessel')}
       ${selector('liquid')}
       <label class="check"><input type="checkbox" id="orden-aleatorio" ${prep.randomOrder ? 'checked' : ''}> ${t.empezarAleatorio}</label>
+      <div class="fila-tiempo">
+        <label class="check"><input type="checkbox" id="con-tiempo" ${prep.turnTime ? 'checked' : ''}> ${t.tiempoPorTurno}</label>
+        ${prep.turnTime ? `<div class="segmentos" role="group" aria-label="${t.tiempoPorTurno}">
+          ${TIEMPOS.map(s => `<button class="segmento${prep.turnTime === s ? ' elegida' : ''}" data-tiempo="${s}" aria-pressed="${prep.turnTime === s}">${t.segundos(s)}</button>`).join('')}
+        </div>` : ''}
+      </div>
       <div class="opinar-fila">${botonOpinar('opinar')}</div>
       </div>
       <div class="pie"><button class="boton principal" id="empezar">${t.empezar}</button></div>
@@ -181,12 +189,19 @@ export function startApp(root: HTMLElement) {
     const el = e.target as HTMLInputElement;
     if (el.dataset.i) names[+el.dataset.i] = el.value;
     if (el.id === 'orden-aleatorio') prep.randomOrder = el.checked;
+    if (el.id === 'con-tiempo') {
+      prep.turnTime = el.checked ? TIEMPOS[0] : 0;
+      showPlayers();
+    }
   });
   pJugadores.addEventListener('click', e => {
     const el = (e.target as HTMLElement).closest('button');
     if (!el) return;
     if (el.dataset.abrir) {
       abrirElegir(el.dataset.abrir as Grupo);
+    } else if (el.dataset.tiempo) {
+      prep.turnTime = +el.dataset.tiempo;
+      showPlayers();
     } else if (el.dataset.quitar) {
       names.splice(+el.dataset.quitar, 1);
       showPlayers();
@@ -286,6 +301,7 @@ export function startApp(root: HTMLElement) {
       vessel: prep.vessel,
       content: prep.liquid,
       randomOrder: prep.randomOrder,
+      turnTime: prep.turnTime,
     };
     game = new Game(finalNames, options);
     partidas++;
@@ -331,6 +347,13 @@ export function startApp(root: HTMLElement) {
   // solo vale un toque que empiece con la capa ya a la vista (o el teclado, detail = 0).
   let capaArmada = false;
   capa.addEventListener('pointerdown', () => { capaArmada = true; });
+  capa.addEventListener('input', e => {
+    const el = e.target as HTMLInputElement;
+    if (el.id === 'revancha-aleatorio') {
+      prep.randomOrder = el.checked;
+      savePrep(prep);
+    }
+  });
   capa.addEventListener('click', e => {
     const el = (e.target as HTMLElement).closest('button');
     if (!el || !game || (!capaArmada && e.detail !== 0)) return;
@@ -369,12 +392,44 @@ export function startApp(root: HTMLElement) {
           ${quedan > 1 ? `<button class="boton con-icono" id="seguir-azar">${iconos.dado}${t.combinacionAleatoria}</button>` : ''}
         </div>`;
     } else if (g.phase === 'fin') {
+      const s = computeStats(g.history);
+      const fila = (icono: string, titulo: string, texto: string, d: { player: number } | null) => d ? `
+        <li class="stat">
+          <span class="stat-icono" aria-hidden="true">${icono}</span>
+          <span class="stat-texto"><b>${titulo}</b><small>${texto}</small></span>
+          <span class="stat-quien">${punto(d.player)}${nombre(d.player)}</span>
+        </li>` : '';
+      const filas = [
+        fila('🌊', t.statGeneroso, t.statGenerosoTexto, s.generoso),
+        fila('💧', t.statRata, t.statRataTexto, s.rata),
+        fila('😰', t.statLimite, t.statLimiteTexto, s.alLimite),
+        fila('⏱️', t.statIndeciso, t.statIndecisoTexto, s.indeciso),
+      ].join('');
       capa.innerHTML = `
         <h1 class="grande">${t.gana(nombre(g.winner!))}</h1>
-        <button class="boton principal" id="revancha">${t.revancha}</button>
-        <button class="boton secundario" id="jugadores">${t.cambiarJugadores}</button>
-        ${botonOpinar('opinar-fin')}`;
+        ${filas ? `<section class="resumen"><h2>${t.resumenTitulo}</h2><ul>${filas}</ul></section>` : ''}
+        <div class="fin-botones">
+          <button class="boton principal" id="revancha">${t.revancha}</button>
+          <label class="check"><input type="checkbox" id="revancha-aleatorio" ${prep.randomOrder ? 'checked' : ''}> ${t.empezarAleatorio}</label>
+          <button class="boton secundario" id="jugadores">${t.cambiarJugadores}</button>
+          ${botonOpinar('opinar-fin')}
+        </div>`;
     }
+  }
+
+  // Cuenta atrás para empezar a echar (solo con tiempo por turno). Se repinta al cambiar de segundo.
+  const reloj = $('j-reloj');
+  let segundoVisto: number | null = null;
+  function pintarReloj(g: Game) {
+    const left = g.timeLeft;
+    const seg = left === null ? null : Math.ceil(left);
+    if (seg === segundoVisto) return;
+    segundoVisto = seg;
+    reloj.hidden = seg === null;
+    if (seg === null) return;
+    reloj.textContent = String(seg);
+    reloj.setAttribute('aria-label', t.segundosParaEchar(seg));
+    reloj.classList.toggle('apurado', seg <= 3);
   }
 
   // ── Bucle: lógica a paso fijo, dibujo a lo que dé la pantalla ──
@@ -395,6 +450,7 @@ export function startApp(root: HTMLElement) {
           showPhase(game);
         }
         setZona(game.poured);
+        pintarReloj(game);
         vista.draw(game, nowMs / 1000);
         debug.update(game);
       } else {

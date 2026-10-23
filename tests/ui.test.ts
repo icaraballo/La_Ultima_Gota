@@ -26,7 +26,7 @@ describe('esc()', () => {
 });
 
 describe('sanearPreparacion()', () => {
-  const base = { names: ['', ''], vessel: 'cilindro', liquid: 'agua', randomOrder: false };
+  const base = { names: ['', ''], vessel: 'cilindro', liquid: 'agua', randomOrder: false, turnTime: 0 };
 
   it.each([null, undefined, 3, 'texto', [], {}])('%j → la preparación base', raw => {
     expect(sanearPreparacion(raw)).toEqual(base);
@@ -51,8 +51,13 @@ describe('sanearPreparacion()', () => {
     expect(sanearPreparacion({ randomOrder: 1 }).randomOrder).toBe(false);
     expect(sanearPreparacion({ randomOrder: true }).randomOrder).toBe(true);
   });
+  it('tiempo por turno: solo 10 o 5 s; lo demás, sin límite', () => {
+    expect(sanearPreparacion({ turnTime: 10 }).turnTime).toBe(10);
+    expect(sanearPreparacion({ turnTime: 5 }).turnTime).toBe(5);
+    for (const v of [7, '10', -5, null, 0]) expect(sanearPreparacion({ turnTime: v }).turnTime).toBe(0);
+  });
   it('una preparación válida sale idéntica', () => {
-    const p = { names: ['Ana', 'Íñigo', '👍🏽 Leo'], vessel: 'aleatorio', liquid: 'monedas', randomOrder: true };
+    const p = { names: ['Ana', 'Íñigo', '👍🏽 Leo'], vessel: 'aleatorio', liquid: 'monedas', randomOrder: true, turnTime: 5 };
     expect(sanearPreparacion(p)).toEqual(p);
     expect(sanearPreparacion({ ...p, vessel: 'botella', liquid: 'aleatorio' })).toEqual({ ...p, vessel: 'botella', liquid: 'aleatorio' });
   });

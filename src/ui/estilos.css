@@ -120,6 +120,9 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
   font-size: 15px; line-height: 1.4;
 }
 .elegir-info em { color: var(--suave); }
+/* Botón de confirmar de la hoja de elegir: fuera de lo que hace scroll, siempre a la vista. */
+.hoja-pie-boton { flex: none; padding: 8px 16px max(16px, var(--sa-abajo)); }
+.hoja-pie-boton .boton { width: 100%; }
 .check { display: flex; gap: 10px; align-items: center; min-height: 44px; color: var(--suave); font-size: 15px; }
 .check input { width: 22px; height: 22px; flex: none; accent-color: var(--acento); }
 /* Tiempo por turno: la casilla y, si está marcada, los segundos al lado. */

@@ -45,6 +45,7 @@ export const es = {
   vaso: 'Vaso',
   liquido: 'Qué se echa',
   vasoYContenido: 'Vaso y qué se echa',
+  elegir: (nombre: string) => `Elegir: ${nombre}`,
   azarTexto: 'Se sortea al empezar la partida.',
   vasos: { cilindro: 'Recto', copa: 'Copa', botella: 'Botella', pecera: 'Pecera', tarta: 'Tarta', chupito: 'Chupito', fuga: 'Con fuga', esmerilado: 'Esmerilado', aleatorio: 'Azar' },
   liquidos: { agua: 'Agua', aceite: 'Aceite', cerveza: 'Cerveza', leche: 'Leche al fuego', canicas: 'Canicas', monedas: 'Monedas', aleatorio: 'Azar' },

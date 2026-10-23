@@ -330,11 +330,18 @@ export function startApp(root: HTMLElement) {
     }
   });
 
-  /** Hoja desde abajo con todas las opciones de un grupo y la explicación de lo elegido. Elegir
-   * la cierra. Usa el mismo fondo que la hoja ⓘ. */
+  /** Hoja desde abajo con todas las opciones de un grupo. Tocar una solo la marca y enseña qué
+   * tiene (v0.14.1, a petición de Iñigo: antes elegía y cerraba, y para leer otra había que
+   * volver a abrir). «Elegir» o tocar otra vez la marcada confirma; cerrar deja lo de antes.
+   * Usa el mismo fondo que la hoja ⓘ. */
+  let marcado: { grupo: Grupo; id: string } | null = null;
+  const textoInfo = (grupo: Grupo, id: string) => {
+    const info = infoDe(grupo, id);
+    return `<b>${cabezaDe(grupo, id)[1]}</b> · ${info.texto}${info.nota ? ` <em>${info.nota}</em>` : ''}`;
+  };
   function abrirElegir(grupo: Grupo) {
     const ids = [...(grupo === 'vessel' ? VESSEL_IDS : CONTENT_IDS), 'aleatorio'];
-    const info = infoDe(grupo, prep[grupo]);
+    marcado = { grupo, id: prep[grupo] };
     const titulo = grupo === 'vessel' ? t.vaso : t.liquido;
     hoja.innerHTML = `
       <section class="hoja" role="dialog" aria-modal="true" aria-labelledby="hoja-titulo">
@@ -346,15 +353,36 @@ export function startApp(root: HTMLElement) {
           <div class="opciones tres${grupo === 'vessel' ? ' vasos' : ''}">
             ${ids.map(id => {
               const [icono, nombre] = cabezaDe(grupo, id);
-              return `<button class="opcion${prep[grupo] === id ? ' elegida' : ''}" data-elegir="${grupo}" data-valor="${id}">${icono}${nombre}</button>`;
+              return `<button class="opcion${prep[grupo] === id ? ' elegida' : ''}" data-elegir="${grupo}" data-valor="${id}" aria-pressed="${prep[grupo] === id}">${icono}${nombre}</button>`;
             }).join('')}
           </div>
-          <p class="elegir-info"><b>${cabezaDe(grupo, prep[grupo])[1]}</b> · ${info.texto}${info.nota ? ` <em>${info.nota}</em>` : ''}</p>
+          <p class="elegir-info" aria-live="polite">${textoInfo(grupo, prep[grupo])}</p>
         </div>
+        <footer class="hoja-pie-boton">
+          <button class="boton principal" id="confirmar-eleccion">${t.elegir(cabezaDe(grupo, prep[grupo])[1])}</button>
+        </footer>
       </section>`;
     hoja.hidden = false;
     try { history.pushState({ hoja: true }, ''); } catch { /* sin historial */ }
     (hoja.querySelector('.opcion.elegida') as HTMLButtonElement | null)?.focus();
+  }
+  function marcar(id: string) {
+    if (!marcado) return;
+    marcado.id = id;
+    for (const b of hoja.querySelectorAll<HTMLElement>('[data-elegir]')) {
+      const si = b.dataset.valor === id;
+      b.classList.toggle('elegida', si);
+      b.setAttribute('aria-pressed', String(si));
+    }
+    hoja.querySelector('.elegir-info')!.innerHTML = textoInfo(marcado.grupo, id);
+    $('confirmar-eleccion').textContent = t.elegir(cabezaDe(marcado.grupo, id)[1]);
+  }
+  function confirmarEleccion() {
+    if (!marcado) return;
+    (prep[marcado.grupo] as string) = marcado.id;
+    marcado = null;
+    cerrarInfo();
+    showPlayers();
   }
   function cerrarInfo() {
     if (hoja.hidden) return;
@@ -366,10 +394,10 @@ export function startApp(root: HTMLElement) {
     const el = e.target as HTMLElement;
     const opcion = el.closest<HTMLElement>('[data-elegir]');
     if (opcion) {
-      (prep[opcion.dataset.elegir as Grupo] as string) = opcion.dataset.valor!;
-      cerrarInfo();
-      showPlayers();
-    } else if (el === hoja || el.closest('#cerrar-info')) cerrarInfo();
+      if (marcado?.id === opcion.dataset.valor) confirmarEleccion();
+      else marcar(opcion.dataset.valor!);
+    } else if (el.closest('#confirmar-eleccion')) confirmarEleccion();
+    else if (el === hoja || el.closest('#cerrar-info')) cerrarInfo();
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarInfo(); });
 

@@ -11,6 +11,7 @@ import { aplicarTemas, guardarTema, LIQUIDOS, SOLIDOS, temaGuardado, type TemaId
 import { createDebug } from './debug';
 import { esc } from './html';
 import { iconos } from './iconos';
+import { botonOpinar, createOpinion, type DatosOpinion } from './opinion';
 import { mantenerVertical } from './orientacion';
 import { MAX_NOMBRE, sanearPreparacion, type Preparacion } from './preparacion';
 
@@ -60,7 +61,7 @@ export function startApp(root: HTMLElement) {
       <div class="capa" id="j-capa" hidden></div>
     </section>
     <div class="hoja-fondo" id="hoja" hidden></div>
-    <div class="version">${t.version(__VERSION__)}</div>
+    <div class="version">${t.version(__VERSION__)}<span class="fuera-de-juego"> · <button class="enlace-priv" id="abrir-privacidad">${t.privacidad}</button></span></div>
   `;
   const $ = (id: string) => document.getElementById(id)!;
   const pJugadores = $('p-jugadores'), pJuego = $('p-juego'), capa = $('j-capa');
@@ -78,6 +79,21 @@ export function startApp(root: HTMLElement) {
   }
   vista.setTema(tema);
   const debug = createDebug(root, vista);
+  const opinion = createOpinion(root);
+  $('abrir-privacidad').addEventListener('click', () => opinion.abrirPrivacidad());
+
+  // Lo que acompaña a una opinión (los campos que no se ven del formulario): la partida en curso
+  // o, en la pantalla de jugadores, la que está preparada. No se traduce: es para Iñigo.
+  let partidas = 0;
+  function datosOpinion(): DatosOpinion {
+    const vaso = game ? game.vesselId : prep.vessel;
+    const contenido = game ? game.contentId : prep.liquid;
+    const jugadores = game ? game.players.length : names.length;
+    const modo = [t.vasos[vaso], t.liquidos[contenido], `${jugadores} jugadores`, tema, vista instanceof Escena3D ? '3D' : '2D'].join(' · ');
+    const momento = game ? (game.phase === 'fin' ? `Acabada · ${game.round} ${game.round === 1 ? 'ronda' : 'rondas'}` : `Ronda ${game.round}`)
+      : partidas ? `Inicio, tras ${partidas} ${partidas === 1 ? 'partida' : 'partidas'}` : 'Inicio';
+    return { version: `v${__VERSION__}`, modo, momento };
+  }
 
   let zonaUsada: boolean | null = null;
   function setZona(usada: boolean) {
@@ -102,6 +118,7 @@ export function startApp(root: HTMLElement) {
   // ── Jugadores ──────────────────────────────────────────────
   function showPlayers() {
     game = null;
+    document.body.classList.remove('en-juego');
     pJuego.hidden = true;
     pJugadores.hidden = false;
     const scroll = pJugadores.querySelector('.desplazable')?.scrollTop ?? 0;
@@ -137,6 +154,7 @@ export function startApp(root: HTMLElement) {
           : `<button class="opcion${prep.liquid === id ? ' elegida' : ''}" data-valor="${id}">${puntoContenido(id)}${t.liquidos[id]}</button>`).join('')}
       </div>
       <label class="check"><input type="checkbox" id="orden-aleatorio" ${prep.randomOrder ? 'checked' : ''}> ${t.empezarAleatorio}</label>
+      <div class="opinar-fila">${botonOpinar('opinar')}</div>
       </div>
       <div class="pie"><button class="boton principal" id="empezar">${t.empezar}</button></div>
     `;
@@ -167,6 +185,8 @@ export function startApp(root: HTMLElement) {
       cambiarTema();
     } else if (el.id === 'abrir-info') {
       abrirInfo();
+    } else if (el.id === 'opinar') {
+      opinion.abrir(datosOpinion());
     }
   });
 
@@ -222,6 +242,8 @@ export function startApp(root: HTMLElement) {
       randomOrder: prep.randomOrder,
     };
     game = new Game(finalNames, options);
+    partidas++;
+    document.body.classList.add('en-juego');
     zonaUsada = null;
     shownPhase = null;
     pJugadores.hidden = true;
@@ -274,6 +296,7 @@ export function startApp(root: HTMLElement) {
     else if (el.id === 'seguir-azar') game.continue(true);
     else if (el.id === 'revancha') start();
     else if (el.id === 'jugadores') showPlayers();
+    else if (el.id === 'opinar-fin') opinion.abrir(datosOpinion());
   });
 
   function showPhase(g: Game) {
@@ -303,7 +326,8 @@ export function startApp(root: HTMLElement) {
       capa.innerHTML = `
         <h1 class="grande">${t.gana(nombre(g.winner!))}</h1>
         <button class="boton principal" id="revancha">${t.revancha}</button>
-        <button class="boton secundario" id="jugadores">${t.cambiarJugadores}</button>`;
+        <button class="boton secundario" id="jugadores">${t.cambiarJugadores}</button>
+        ${botonOpinar('opinar-fin')}`;
     }
   }
 

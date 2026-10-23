@@ -201,6 +201,52 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
   position: fixed; right: 10px; bottom: max(4px, var(--sa-abajo));
   font-size: 11px; color: var(--suave); pointer-events: none; z-index: 3;
 }
+/* «Privacidad» junto a la versión (v0.7.3), solo fuera de la partida: en el juego quedaría pegado a
+   la zona de echar. ::after agranda la zona de toque. */
+.enlace-priv {
+  position: relative; pointer-events: auto; border: 0; background: none; padding: 0;
+  font: inherit; color: inherit; text-decoration: underline; text-underline-offset: 2px;
+}
+.enlace-priv::after { content: ''; position: absolute; inset: -12px -8px; }
+.en-juego .fuera-de-juego { display: none; }
+
+/* ── Opinar y Privacidad (v0.7.3): las hojas, como la ⓘ; la de privacidad, por encima ── */
+.opinar {
+  display: flex; align-items: center; justify-content: center; gap: 8px; align-self: center;
+  min-height: 44px; padding: 6px 14px; border: 0; background: none;
+  font-size: 16px; font-weight: 600; color: var(--acento);
+}
+.opinar-fila { display: flex; justify-content: center; margin-top: 6px; }
+.hoja-fondo.encima { z-index: 6; }
+.hoja-opinion { height: 88%; }
+.con-teclado .hoja-opinion { height: 100%; max-height: 100%; }
+.op-form { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.op-preguntas { flex: 1; min-height: 0; gap: 14px; padding-bottom: 8px; }
+.op-pie {
+  flex: none; display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 16px max(14px, var(--sa-abajo)); border-top: 2px solid var(--panel-borde);
+}
+.op-form label { display: flex; flex-direction: column; gap: 6px; font-size: 16px; font-weight: 600; }
+.op-form textarea, .op-form input {
+  font: 400 16px 'Fredoka Variable', system-ui, sans-serif; color: var(--texto);
+  background: var(--panel); border: 2px solid var(--panel-borde); border-radius: 14px;
+  padding: 10px 12px; width: 100%; resize: none; outline: none;
+}
+.op-form textarea { min-height: 70px; }
+.op-form textarea:focus, .op-form input:focus { border-color: var(--acento); }
+.op-form ::placeholder { color: var(--suave); opacity: .8; }
+.op-aviso { color: var(--peligro); font-size: 15px; }
+.op-aviso:empty { display: none; }
+.op-privacidad { color: var(--suave); font-size: 13px; line-height: 1.4; text-align: center; }
+.con-teclado .op-privacidad { display: none; }
+.op-gracias { flex: 1; gap: 16px; }
+.op-ok { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 24px 8px 8px; }
+.hoja-cuerpo .op-ok h3 { font-size: 26px; font-weight: 700; color: var(--texto); text-transform: none; letter-spacing: 0; margin: 0; }
+.op-ok p { color: var(--suave); font-size: 16px; line-height: 1.4; max-width: 280px; }
+.priv-texto { gap: 12px; }
+.priv-texto p { font-size: 16px; line-height: 1.45; }
+.priv-texto b { font-weight: 600; color: var(--acento); }
+.priv-texto .boton.principal { margin-top: 6px; }
 
 /* ── Modo depuración (herramienta: colores propios, oscuros) ── */
 .debug { position: fixed; inset: 0; pointer-events: none; z-index: 10; font-size: 13px; font-family: system-ui, sans-serif; color: #f4efe6; }

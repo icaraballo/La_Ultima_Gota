@@ -69,6 +69,36 @@ export const es = {
   infoLiquidos,
   infoSolidos,
   infoPie: 'El vaso aguanta un poco por encima del borde… pero nunca exactamente lo mismo.',
+
+  // Opinar y Privacidad (v0.7.3). Las preguntas son las del formulario de Google, en su orden
+  // (los `entry`, en ui/opinion.ts). La privacidad dice lo mismo que el README: si cambia qué se
+  // guarda o qué se envía, cambiar los dos (lo vigila tests/ui.test.ts).
+  opinar: 'Opinar',
+  opinionTitulo: '¿Qué te parece?',
+  opinionPreguntas: [
+    { texto: '¿Qué te ha gustado?', largo: true },
+    { texto: '¿Qué te ha confundido o te ha sobrado?', largo: true },
+    { texto: '¿Has encontrado algo raro o «roto»?', largo: true },
+    { texto: 'Cuéntame lo que quieras', ayuda: 'Ideas, quejas, lo que se te ocurra', largo: true },
+    { texto: 'Tu nombre', ayuda: 'Opcional, si quieres que te responda', largo: false },
+    { texto: 'Correo u otro contacto', ayuda: 'Opcional', largo: false },
+  ] as { texto: string; ayuda?: string; largo: boolean }[],
+  enviar: 'Enviar',
+  enviando: 'Enviando…',
+  opinionVacia: 'Escribe algo en alguna pregunta antes de enviar.',
+  opinionSinRed: 'No se ha podido enviar: parece que no hay conexión. Lo escrito sigue aquí; inténtalo en un rato.',
+  opinionPrivacidad: 'Se envía a un formulario de Google con la versión y la partida. Nombre y contacto, solo si los pones.',
+  gracias: '¡Gracias!',
+  graciasTexto: 'Lo leo todo. Tu opinión ayuda a que el juego mejore.',
+  volverAlJuego: 'Volver al juego',
+  privacidad: 'Privacidad',
+  entendido: 'Entendido',
+  privacidadTexto: [
+    'La Última Gota <b>no tiene servidor, ni cuentas, ni analítica, ni cookies</b>.',
+    'Guarda en este navegador los nombres de la última partida y el tema elegido. <b>Nada de eso sale de tu móvil</b>; si borras los datos del sitio, se borran.',
+    'Si mandas una opinión, va a un <b>formulario de Google</b> con la versión del juego y la partida (vaso, qué se echa y cuántos jugáis). Tu nombre y tu contacto, solo si los escribes.',
+    'GitHub, que aloja la página, y Google, si opinas, <b>ven tu dirección IP</b>, como cualquier web.',
+  ],
 };
 
 export type Textos = typeof es;

@@ -3,6 +3,10 @@ import { config } from '../src/core/config';
 import { sanearValores } from '../src/ui/debug';
 import { esc } from '../src/ui/html';
 import { MAX_NOMBRE, sanearPreparacion } from '../src/ui/preparacion';
+import { cuerpoOpinion, OPINION_CAMPOS, OPINION_ENTRIES } from '../src/ui/opinion';
+import { t } from '../src/i18n';
+import { CSP } from '../vite.config';
+import { readFileSync } from 'node:fs';
 
 // Lo que llega de fuera (nombres que escribe la gente y lo guardado en localStorage) nunca puede
 // romper una pantalla. Revisión antes de publicar el enlace, 20-10-2026.
@@ -72,5 +76,37 @@ describe('sanearValores()', () => {
   });
   it.each([null, 'texto', 3, [1, 2]])('%j → nada', raw => {
     expect(sanearValores(raw, params)).toEqual({});
+  });
+});
+
+describe('Opinar (v0.7.3)', () => {
+  it('sin nada escrito no se envía', () => {
+    expect(cuerpoOpinion({ 'entry.1': '  ' }, { version: 'v0.7.3' })).toBeNull();
+  });
+  it('solo las preguntas escritas, los datos que haya y pageHistory', () => {
+    const c = cuerpoOpinion({ 'entry.1': ' hola ', 'entry.2': '' }, { version: 'v0.7.3', modo: 'Copa · Agua', momento: '' })!;
+    expect(c).toContain('entry.1=hola');
+    expect(c).not.toContain('entry.2=');
+    expect(c).toContain(`${OPINION_CAMPOS.version}=v0.7.3`);
+    expect(c).toContain(`${OPINION_CAMPOS.modo}=${encodeURIComponent('Copa · Agua')}`);
+    expect(c).not.toContain(`${OPINION_CAMPOS.momento}=`);
+    expect(c.endsWith(`pageHistory=${encodeURIComponent('0,1')}`)).toBe(true);
+  });
+  it('una pregunta por cada entry del formulario', () => {
+    expect(t.opinionPreguntas).toHaveLength(OPINION_ENTRIES.length);
+  });
+});
+
+describe('Privacidad (v0.7.3)', () => {
+  const llano = (s: string) => s.replace(/<\/?b>|\*\*/g, '').replace(/\s+/g, ' ');
+  const readme = llano(readFileSync(new URL('../README.md', import.meta.url), 'utf8'));
+  const enJuego = llano(t.privacidadTexto.join(' '));
+  it.each(['no tiene servidor, ni cuentas, ni analítica, ni cookies', 'Nada de eso sale de tu móvil',
+    'va a un formulario de Google', 'ven tu dirección IP'])('«%s», en el juego y en el README', frase => {
+    expect(enJuego).toContain(frase);
+    expect(readme).toContain(frase);
+  });
+  it('la CSP deja conectarse al formulario y a nada más de fuera', () => {
+    expect(CSP).toContain("connect-src 'self' https://docs.google.com;");
   });
 });

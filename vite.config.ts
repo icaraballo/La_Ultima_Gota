@@ -35,8 +35,9 @@ function licenciasQueFaltan(): Plugin {
 /** Política de seguridad del contenido. Pages no deja poner cabeceras, así que va en un <meta>, y
  * solo en la build (en desarrollo rompería la recarga de Vite). `style-src 'unsafe-inline'` hace
  * falta por el <style> de temas.ts y los style="background:…" de app.ts; los scripts, estrictos.
- * `frame-ancestors` no funciona en <meta>: contra los iframes no hay protección en Pages. */
-export const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'";
+ * `frame-ancestors` no funciona en <meta>: contra los iframes no hay protección en Pages.
+ * `connect-src`: además de lo propio, solo el formulario de Google de opinar (v0.7.3). */
+export const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; connect-src 'self' https://docs.google.com; object-src 'none'; base-uri 'self'; form-action 'none'";
 
 function politicaDeContenido(): Plugin {
   return {

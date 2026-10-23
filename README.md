@@ -48,8 +48,16 @@ azar sale de un generador con semilla, para poder repetir partidas.
 
 ## Privacidad
 
-No hay cuentas, cookies ni analítica, y el juego no hace peticiones a terceros. Guarda en
-tu navegador los nombres de la última partida y el tema elegido; nada sale de tu móvil.
+La Última Gota **no tiene servidor, ni cuentas, ni analítica, ni cookies**.
+
+- Guarda en este navegador los nombres de la última partida y el tema elegido. **Nada de eso
+  sale de tu móvil**; si borras los datos del sitio, se borran.
+- Si mandas una opinión con «Opinar», va a un **formulario de Google** con la versión del juego
+  y la partida (vaso, qué se echa y cuántos jugáis). Tu nombre y tu contacto, solo si los escribes.
+  Es lo único que el juego envía fuera.
+- GitHub, que aloja la página, y Google, si opinas, **ven tu dirección IP**, como cualquier web.
+
+Lo mismo se lee dentro del juego: «Privacidad», junto a la versión, y en la hoja de «Opinar».
 
 ## Seguridad
 

@@ -2,12 +2,17 @@
 // El nivel se calcula integrando el área, así que el mismo volumen sube distinto en cada
 // forma. El perfil servirá también para la geometría 3D (LatheGeometry, fase 3).
 
-export type VesselId = 'cilindro' | 'copa' | 'botella';
-export const VESSEL_IDS: VesselId[] = ['cilindro', 'copa', 'botella'];
+export type VesselId = 'cilindro' | 'copa' | 'botella' | 'pecera' | 'tarta' | 'chupito';
+export const VESSEL_IDS: VesselId[] = ['cilindro', 'copa', 'botella', 'pecera', 'tarta', 'chupito'];
 
 export interface Vessel {
   id: string;
-  /** Radio relativo a la altura h ∈ [0, 1]. */
+  /** Alto del vaso respecto al recto (1). El chupito es más bajo. */
+  height: number;
+  /** Cuánto cabe hasta el borde respecto al recto (1): lo echado se divide por esto, así que
+   * en el chupito cada gota sube mucho más. Sale del perfil y del alto. */
+  capacity: number;
+  /** Radio respecto al del recto, a la altura h ∈ [0, 1]. */
   radius(h: number): number;
   /** Altura del líquido (1 = borde) para un volumen (1 = lleno hasta el borde). */
   volumeToHeight(v: number): number;
@@ -16,7 +21,7 @@ export interface Vessel {
 
 const SAMPLES = 256;
 
-export function makeVessel(id: string, radius: (h: number) => number): Vessel {
+export function makeVessel(id: string, radius: (h: number) => number, height = 1): Vessel {
   // Volumen acumulado V(h) = ∫ r² dh, por trapecios, normalizado a 1 en el borde.
   const acc = new Float64Array(SAMPLES + 1);
   for (let i = 1; i <= SAMPLES; i++) {
@@ -31,6 +36,8 @@ export function makeVessel(id: string, radius: (h: number) => number): Vessel {
 
   return {
     id,
+    height,
+    capacity: total * height,
     radius,
     volumeToHeight(v) {
       if (v <= 0) return 0;
@@ -65,6 +72,18 @@ const vessels: Record<VesselId, Vessel> = {
   copa: makeVessel('copa', h => 0.3 + 0.7 * h),
   // Cuerpo ancho y cuello estrecho: el último cuarto de altura es ~4 % del volumen.
   botella: makeVessel('botella', h => 1 - 0.68 * smooth(0.55, 0.75, h)),
+  // Los tres de §7.4 (v0.8.0), con las medidas del prototipo: px de medio ancho a cada altura en
+  // un vaso de 250 px, sobre los 77,5 del recto.
+  // Pecera: panza ancha y boca estrecha. A medio llenar parece poquísimo; en la boca vuela.
+  pecera: makeVessel('pecera', h => {
+    const y = h * 250;
+    const panza = 102 * Math.sqrt(Math.max(0, 1 - ((y - 100) / 125) ** 2));
+    return (y < 210 ? Math.max(40, panza) : 40) / 77.5;
+  }),
+  // Tarta de pisos: cada piso más estrecho; al cambiar, lo mismo sube el doble de rápido.
+  tarta: makeVessel('tarta', h => (h < 84 / 250 ? 100 : h < 167 / 250 ? 70 : 42) / 77.5),
+  // Chupito: 100 px de alto (0,4 del recto) y de 46 a 56 de medio ancho. Cabe ~1/6 del recto.
+  chupito: makeVessel('chupito', h => (46 + 10 * h) / 77.5, 0.4),
 };
 
 export function getVessel(id: VesselId): Vessel {

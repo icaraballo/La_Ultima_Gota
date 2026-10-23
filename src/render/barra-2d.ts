@@ -44,7 +44,9 @@ export class Barra2D {
     // Geometría: mesa abajo, vaso en el centro, grifo arriba.
     const mesaY = h - 8;
     const gw = Math.min(w * 0.42, 190);
-    const gh = Math.min(h * 0.66, gw * 2.4);
+    // Alto del recto; el de esta ronda va a escala (el chupito es más bajo).
+    const ghRecto = Math.min(h * 0.66, gw * 2.4);
+    const gh = ghRecto * glass.vessel.height;
     const cx = w / 2;
     const left = cx - gw / 2, right = cx + gw / 2;
     const rimY = mesaY - gh;
@@ -115,7 +117,7 @@ export class Barra2D {
 
     // Canicas y monedas (el vaso 2D es recto: se dibujan con su posición en el corte del vaso).
     if (game.pile) {
-      const kx = (gw / 2) / SOLID_PX_RADIUS, ky = gh / SOLID_PX_PER_H;
+      const kx = (gw / 2) / SOLID_PX_RADIUS, ky = ghRecto / SOLID_PX_PER_H;
       for (const p of game.pile.pieces) {
         ctx.save();
         ctx.translate(cx + p.x * kx, mesaY - p.y * ky);

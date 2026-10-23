@@ -52,17 +52,20 @@ export class Pile {
   /** El perfil del vaso como polígono (x, y hacia arriba), para saber qué está dentro. */
   private poly: { x: number; y: number }[] = [];
   private calmFor = 0;
+  /** Alto de este vaso en px del motor (el chupito es más bajo). */
+  private readonly hPx: number;
 
   constructor(readonly kind: SolidId, readonly vessel: Vessel, private rng: Rng, private cfg: Config) {
     const s = cfg.solids;
+    this.hPx = SOLID_PX_PER_H * vessel.height;
     this.engine = Matter.Engine.create({ gravity: { x: 0, y: 1, scale: 0.001 }, positionIterations: 10, velocityIterations: 8 });
     const N = 32;
     const left: { x: number; y: number }[] = [], right: { x: number; y: number }[] = [];
     for (let i = 0; i <= N; i++) {
       const h = i / N;
       const r = vessel.radius(h) * SOLID_PX_RADIUS;
-      left.push({ x: -r, y: h * SOLID_PX_PER_H });
-      right.push({ x: r, y: h * SOLID_PX_PER_H });
+      left.push({ x: -r, y: h * this.hPx });
+      right.push({ x: r, y: h * this.hPx });
     }
     this.poly = [...left, ...right.reverse()];
     right.reverse();
@@ -93,7 +96,7 @@ export class Pile {
   drop() {
     const { rng, cfg: { solids: s } } = this;
     const jit = rng.signed() * 0.5;
-    const y = -(SOLID_PX_PER_H + s.spawnHeight);
+    const y = -(this.hPx + s.spawnHeight);
     let body: Matter.Body;
     let piece: Omit<Piece, 'body' | 'x' | 'y' | 'angle'>;
     if (this.kind === 'canicas') {
@@ -141,7 +144,7 @@ export class Pile {
 
   /** Por debajo del borde y fuera del perfil del vaso: se ha salido. */
   private isOutside(p: Piece) {
-    if (p.y > SOLID_PX_PER_H - 6) return false;
+    if (p.y > this.hPx - 6) return false;
     return !this.inside(p.x, p.y);
   }
 
@@ -157,8 +160,8 @@ export class Pile {
 
   /** Piezas dentro del vaso y altura del montón (1 = el borde), para la depuración. */
   get fill() {
-    const dentro = this.pieces.filter(p => p !== this.out && this.inside(p.x, Math.min(p.y, SOLID_PX_PER_H - 1)));
+    const dentro = this.pieces.filter(p => p !== this.out && this.inside(p.x, Math.min(p.y, this.hPx - 1)));
     const top = dentro.reduce((m, p) => Math.max(m, p.y + p.h / 2), 0);
-    return { count: dentro.length, height: top / SOLID_PX_PER_H };
+    return { count: dentro.length, height: top / this.hPx };
   }
 }

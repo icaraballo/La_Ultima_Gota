@@ -42,11 +42,12 @@ export class Glass {
     return Math.min(1, this.total / this.limit);
   }
 
-  /** Lo que pase del límite se derrama: el vaso se queda en el límite. */
+  /** Lo que pase del límite se derrama: el vaso se queda en el límite. `v` y `foam` van en
+   * vasos rectos; se pasan a este vaso con su capacidad. */
   add(v: number, foam = 0) {
     if (v <= 0 && foam <= 0) return;
-    this.volume += v;
-    this.foam += foam;
+    this.volume += v / this.vessel.capacity;
+    this.foam += foam / this.vessel.capacity;
     if (this.total > this.limit) {
       this.overflowed = true;
       const extra = this.total - this.limit;

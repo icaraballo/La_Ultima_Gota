@@ -102,6 +102,23 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
   background: var(--acento); color: var(--acento-texto); border-color: var(--tinta);
   font-weight: 600; box-shadow: 0 3px 0 var(--tinta);
 }
+.selector {
+  display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 8px 14px; text-align: left;
+  background: var(--panel); border: 2px solid var(--panel-borde); border-radius: 16px;
+}
+.selector-icono { flex: none; display: grid; place-items: center; width: 28px; }
+.selector-icono .punto { width: 18px; height: 18px; }
+.selector-nombre { flex: 1; min-width: 0; font-size: 18px; font-weight: 600; }
+.selector-nombre small {
+  display: block; font-size: 13px; font-weight: 400; color: var(--suave);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.selector-flecha { flex: none; font-size: 20px; color: var(--suave); }
+.elegir-info {
+  background: var(--panel); border: 2px solid var(--panel-borde); border-radius: 16px; padding: 10px 14px;
+  font-size: 15px; line-height: 1.4;
+}
+.elegir-info em { color: var(--suave); }
 .check { display: flex; gap: 10px; align-items: center; min-height: 44px; color: var(--suave); font-size: 15px; }
 .check input { width: 22px; height: 22px; flex: none; accent-color: var(--acento); }
 

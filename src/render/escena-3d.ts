@@ -13,7 +13,9 @@ import { LIQUIDOS, SOLIDOS, TEMAS, type ColoresEscena, type TemaId } from './tem
 // así que lo que se ve sube exactamente como calcula core/. Nada de simulación de fluidos.
 // Lo que más importa es que el borde se lea: aro blanco sobre tinta y contorno del cristal.
 
-const H = 2;              // alto del vaso
+const H = 2;              // alto del vaso recto (el grifo y la cámara se miden con él)
+/** Alto del vaso de esta ronda: H × vessel.height (el chupito es más bajo). Lo fija setVessel. */
+let GH = H;
 const R = 0.62;           // radio donde el perfil vale 1
 const GLASS = 1.03;       // el cristal, un poco por fuera del líquido
 const SPOUT_Y = H + 0.45; // boca del grifo
@@ -120,7 +122,7 @@ function profile(vessel: Vessel, h0: number, h1: number, scale = 1, steps = 40):
   const pts: THREE.Vector2[] = [];
   for (let i = 0; i <= steps; i++) {
     const h = h0 + (h1 - h0) * (i / steps);
-    pts.push(new THREE.Vector2(R * vessel.radius(h) * scale, H * h));
+    pts.push(new THREE.Vector2(R * vessel.radius(h) * scale, GH * h));
   }
   return pts;
 }
@@ -617,6 +619,7 @@ export class Escena3D {
 
   private setVessel(v: Vessel) {
     this.vessel = v;
+    GH = H * v.height;
     const pts = [new THREE.Vector2(0, -0.02), ...profile(v, 0, 1, GLASS)];
     pts[1].y = -0.02;
     this.glass.geometry.dispose();
@@ -630,13 +633,13 @@ export class Escena3D {
     // Contorno del cristal: la silueta (lados y el arco delantero del fondo) como un tubo.
     const sil: THREE.Vector3[] = [];
     const rr = (h: number) => R * v.radius(h) * GLASS;
-    for (let i = 40; i >= 0; i--) sil.push(new THREE.Vector3(-rr(i / 40), H * i / 40, 0));
+    for (let i = 40; i >= 0; i--) sil.push(new THREE.Vector3(-rr(i / 40), GH * i / 40, 0));
     const r0 = rr(0);
     for (let i = 1; i < 24; i++) {
       const a = Math.PI * (1 - i / 24);
       sil.push(new THREE.Vector3(Math.cos(a) * r0, -0.02, Math.sin(a) * r0));
     }
-    for (let i = 0; i <= 40; i++) sil.push(new THREE.Vector3(rr(i / 40), H * i / 40, 0));
+    for (let i = 0; i <= 40; i++) sil.push(new THREE.Vector3(rr(i / 40), GH * i / 40, 0));
     this.glassLine.geometry.dispose();
     this.glassLine.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(sil, false, 'centripetal'), 220, 1.75 * PX, 6, false);
 
@@ -648,7 +651,7 @@ export class Escena3D {
     this.rim.geometry = new THREE.TorusGeometry(rRim, 2.3 * PX, 8, SEGMENTS * 2);
     for (const m of [this.rimInk, this.rim]) {
       m.rotation.x = Math.PI / 2;
-      m.position.y = H;
+      m.position.y = GH;
     }
 
     const sr = R * v.radius(0) * 1.25 + 0.16;
@@ -730,7 +733,7 @@ export class Escena3D {
       return;
     }
     const pts = profile(this.vessel!, h0, h1, 0.985, Math.max(2, Math.ceil((h1 - h0) * 40)));
-    if (closeBottom) pts.unshift(new THREE.Vector2(0, H * h0));
+    if (closeBottom) pts.unshift(new THREE.Vector2(0, GH * h0));
     mesh.geometry = new THREE.LatheGeometry(pts, SEGMENTS);
     mesh.visible = true;
   }
@@ -776,7 +779,7 @@ export class Escena3D {
     const top = glass.height;
     const liquidTop = Math.min(glass.liquidHeight, 1);
     const capped = Math.min(top, 1);
-    const dome = Math.max(0, top - 1) * H * MENISCO_VISIBLE;
+    const dome = Math.max(0, top - 1) * GH * MENISCO_VISIBLE;
     const hasFoam = capped - liquidTop >= 0.002;
 
     if (Math.abs(liquidTop - this.lastLiquid) > 0.001) {
@@ -799,7 +802,7 @@ export class Escena3D {
     this.surfaceMat.color.set(glass.foam > 0.002 || !l.espuma ? l.superficie : l.reflejo);
     const rTop = R * v.radius(capped) * 0.985;
     surf.scale.set(rTop, 1, rTop);
-    surf.position.y = H * capped;
+    surf.position.y = GH * capped;
     const amp = (0.003 + Math.min(0.02, faucet.flow * 0.18)) * (dome > 0 ? 0.3 : 1);
     const pos = surf.geometry.attributes.position as THREE.BufferAttribute;
     for (let i = 0; i < pos.count; i++) {
@@ -808,8 +811,8 @@ export class Escena3D {
       pos.setY(i, dome * (1 - rho * rho) + wave);
     }
     pos.needsUpdate = true;
-    const surfaceY = H * capped + dome;
-    const ySurf = H * capped;
+    const surfaceY = GH * capped + dome;
+    const ySurf = GH * capped;
 
     // Línea de contacto con el cristal (se oculta con la cúpula) y contorno de la cúpula.
     if (Math.abs(rTop - this.lastSurfR) > 0.002) {
@@ -859,7 +862,7 @@ export class Escena3D {
         const s = ((i * 0.37) % 1) * 1.2 - 0.6;
         const rr = R * v.radius(h) * 0.99;
         const a = phi(s);
-        this.setInstance(this.bubbles, nb++, Math.sin(a) * rr, H * h, Math.cos(a) * rr, (1.6 + (i % 3) * 0.5) * PX);
+        this.setInstance(this.bubbles, nb++, Math.sin(a) * rr, GH * h, Math.cos(a) * rr, (1.6 + (i % 3) * 0.5) * PX);
       }
     }
     this.bubbles.count = nb;
@@ -962,7 +965,7 @@ export class Escena3D {
           const h = 1 - L * j / 24;
           const rr = R * v.radius(h) * GLASS + 0.02;
           const wig = 0.012 * Math.sin(h * 11 + ph);
-          pts.push(new THREE.Vector3(Math.sin(a) * rr + Math.cos(a) * wig, H * h + 0.01, Math.cos(a) * rr - Math.sin(a) * wig));
+          pts.push(new THREE.Vector3(Math.sin(a) * rr + Math.cos(a) * wig, GH * h + 0.01, Math.cos(a) * rr - Math.sin(a) * wig));
         }
         const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 3.2 * PX, 8, false);
         this.rivers[i].geometry.dispose();
@@ -973,7 +976,7 @@ export class Escena3D {
       const rimR = R * v.radius(1) * GLASS;
       for (const [x0, vx, o] of [[-rimR, -0.5, 0], [rimR, 0.55, 0.4], [rimR * 0.5, 0.25, 0.7]]) {
         const tt = ((now * 1.6 + o) % 1) * 0.5;
-        bit(x0 + vx * tt, H + 1.1 * tt - 5 * tt * tt + 0.03, 3.2 * PX);
+        bit(x0 + vx * tt, GH + 1.1 * tt - 5 * tt * tt + 0.03, 3.2 * PX);
       }
       this.bits.count = this.bitsInk.count = nbits;
       const pr = R * v.radius(0) + 0.15 + 0.4 * k;
@@ -1006,7 +1009,7 @@ export class Escena3D {
     // Depuración: el límite oculto de la ronda.
     this.limitRing.visible = this.showLimit;
     if (this.showLimit) {
-      this.limitRing.position.y = H + (v.volumeToHeight(glass.limit) - 1) * H * MENISCO_VISIBLE;
+      this.limitRing.position.y = GH + (v.volumeToHeight(glass.limit) - 1) * GH * MENISCO_VISIBLE;
       this.limitRing.scale.setScalar(R * v.radius(1) * 1.15);
     }
 

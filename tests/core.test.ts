@@ -5,7 +5,7 @@ import { Glass } from '../src/core/glass-state';
 import { getLiquid } from '../src/core/liquids';
 import { Faucet } from '../src/core/pour';
 import { createRng } from '../src/core/rng';
-import { getVessel, makeVessel } from '../src/core/vessels';
+import { getVessel, makeVessel, VESSEL_IDS } from '../src/core/vessels';
 
 const DT = 1 / config.stepsPerSecond;
 const agua = getLiquid('agua');
@@ -326,6 +326,29 @@ describe('contenido: vasos, líquidos y espuma', () => {
     expect(b.volumeToHeight(0.5)).toBeLessThan(0.45);
   });
 
+  it('pecera: a medio vaso de altura lleva más de la mitad, y la boca sube muchísimo', () => {
+    const p = getVessel('pecera');
+    expect(p.heightToVolume(0.5)).toBeGreaterThan(0.55);
+    expect(1 - p.heightToVolume(0.85)).toBeLessThan(0.06);
+  });
+
+  it('tarta: cada piso sube más rápido que el de abajo', () => {
+    const t = getVessel('tarta');
+    const ritmo = (h: number) => 0.02 / (t.heightToVolume(h + 0.01) - t.heightToVolume(h - 0.01));
+    expect(ritmo(0.5)).toBeGreaterThan(1.8 * ritmo(0.2));
+    expect(ritmo(0.85)).toBeGreaterThan(2.5 * ritmo(0.5));
+  });
+
+  it('chupito: bajo y pequeño, la misma gota sube mucho más', () => {
+    const c = getVessel('chupito');
+    expect(c.height).toBeLessThan(0.5);
+    expect(c.capacity).toBeLessThan(0.25);
+    expect(getVessel('cilindro').capacity).toBeCloseTo(1);
+    const g = new Glass(c, agua, createRng(1), config);
+    g.add(0.05);
+    expect(g.volume).toBeCloseTo(0.05 / c.capacity);
+  });
+
   it('el menisco es altura: en la botella aguanta mucho menos volumen que en la copa', () => {
     const g = (v: 'botella' | 'copa') => new Glass(getVessel(v), agua, createRng(1), config);
     expect(g('botella').limit - 1).toBeLessThan(g('copa').limit - 1);
@@ -400,8 +423,8 @@ describe('contenido: vasos, líquidos y espuma', () => {
     expect(`${g.vesselId}:${g.contentId}`).not.toBe(anterior);
   });
 
-  it('las 15 combinaciones se juegan hasta un ganador', () => {
-    for (const vessel of ['cilindro', 'copa', 'botella'] as const) {
+  it('las 30 combinaciones se juegan hasta un ganador', () => {
+    for (const vessel of VESSEL_IDS) {
       for (const liquid of ['agua', 'aceite', 'cerveza', 'canicas', 'monedas'] as const) {
         const g = new Game(['A', 'B', 'C'], { seed: 5, vessel, content: liquid }, rapido);
         const r = createRng(9);
@@ -458,7 +481,7 @@ describe('canicas y monedas', () => {
 
   it('quien hace caer una pieza fuera queda eliminado', () => {
     for (const content of ['canicas', 'monedas'] as const) {
-      for (const vessel of ['cilindro', 'copa', 'botella'] as const) {
+      for (const vessel of VESSEL_IDS) {
         const g = new Game(['A', 'B', 'C'], { seed: 2, vessel, content }, rapido);
         g.ready();
         const quien = g.current;

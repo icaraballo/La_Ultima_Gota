@@ -1,9 +1,9 @@
 import { config } from '../core/config';
 import { Game, type GameOptions, type Phase } from '../core/game';
 import { CONTENT_IDS, isSolid, type ContentId } from '../core/contents';
-import { LIQUID_IDS } from '../core/liquids';
-import { SOLID_IDS } from '../core/solids';
-import { VESSEL_IDS } from '../core/vessels';
+import { LIQUID_IDS, type LiquidId } from '../core/liquids';
+import { SOLID_IDS, type SolidId } from '../core/solids';
+import { VESSEL_IDS, type VesselId } from '../core/vessels';
 import { t } from '../i18n';
 import { Barra2D } from '../render/barra-2d';
 import { Escena3D } from '../render/escena-3d';
@@ -37,6 +37,20 @@ const puntoContenido = (id: ContentId) =>
 
 /** Punto de color de cada jugador (por su posición en la lista). */
 const punto = (i: number) => `<span class="punto" style="background:var(--punto-${i % 10})"></span>`;
+
+type Grupo = 'vessel' | 'liquid';
+/** Qué tiene un vaso o lo que se echa (hoja ⓘ y desplegables). */
+function infoDe(grupo: Grupo, id: string): { texto: string; nota: string } {
+  if (id === 'aleatorio') return { texto: t.azarTexto, nota: '' };
+  if (grupo === 'vessel') return t.infoVasos[id as VesselId];
+  return isSolid(id as ContentId) ? t.infoSolidos[id as SolidId] : t.infoLiquidos[id as LiquidId];
+}
+/** Icono o punto y nombre de una opción. */
+function cabezaDe(grupo: Grupo, id: string) {
+  if (grupo === 'vessel') return [id === 'aleatorio' ? iconos.dado : iconos.vasos[id as VesselId], t.vasos[id as VesselId | 'aleatorio']];
+  return [id === 'aleatorio' ? iconos.dado : puntoContenido(id as ContentId), t.liquidos[id as ContentId | 'aleatorio']];
+}
+const primeraFrase = (texto: string) => texto.split(/(?<=\.) /)[0];
 
 export function startApp(root: HTMLElement) {
   mantenerVertical();
@@ -116,6 +130,16 @@ export function startApp(root: HTMLElement) {
   }
 
   // ── Jugadores ──────────────────────────────────────────────
+  /** Fila desplegable (v0.8.0, opción B): lo elegido y una línea de qué tiene; abre la hoja. */
+  function selector(grupo: Grupo) {
+    const id = prep[grupo];
+    const [icono, nombre] = cabezaDe(grupo, id);
+    return `<button class="selector" data-abrir="${grupo}" aria-haspopup="dialog" aria-label="${grupo === 'vessel' ? t.vaso : t.liquido}: ${nombre}">
+      <span class="selector-icono">${icono}</span>
+      <span class="selector-nombre">${nombre}<small>${primeraFrase(infoDe(grupo, id).texto)}</small></span>
+      <span class="selector-flecha" aria-hidden="true">▾</span>
+    </button>`;
+  }
   function showPlayers() {
     game = null;
     document.body.classList.remove('en-juego');
@@ -143,16 +167,9 @@ export function startApp(root: HTMLElement) {
           </li>`).join('')}
       </ol>
       ${names.length < config.maxPlayers ? `<button class="anadir" id="anadir">${t.anadirJugador}</button>` : ''}
-      <h2>${t.vaso}</h2>
-      <div class="opciones vasos" data-opcion="vessel">
-        ${[...VESSEL_IDS, 'aleatorio' as const].map(id => `<button class="opcion${prep.vessel === id ? ' elegida' : ''}" data-valor="${id}"${id === 'aleatorio' ? ` aria-label="${t.vasoAzar}"` : ''}>${id === 'aleatorio' ? iconos.dado : iconos.vasos[id]}${t.vasos[id]}</button>`).join('')}
-      </div>
-      <h2>${t.liquido}</h2>
-      <div class="opciones tres" data-opcion="liquid">
-        ${[...CONTENT_IDS, 'aleatorio' as const].map(id => id === 'aleatorio'
-          ? `<button class="opcion${prep.liquid === id ? ' elegida' : ''}" data-valor="${id}" aria-label="${t.liquidoAzar}">${iconos.dado}${t.liquidos.aleatorio}</button>`
-          : `<button class="opcion${prep.liquid === id ? ' elegida' : ''}" data-valor="${id}">${puntoContenido(id)}${t.liquidos[id]}</button>`).join('')}
-      </div>
+      <h2>${t.vasoYContenido}</h2>
+      ${selector('vessel')}
+      ${selector('liquid')}
       <label class="check"><input type="checkbox" id="orden-aleatorio" ${prep.randomOrder ? 'checked' : ''}> ${t.empezarAleatorio}</label>
       <div class="opinar-fila">${botonOpinar('opinar')}</div>
       </div>
@@ -168,10 +185,8 @@ export function startApp(root: HTMLElement) {
   pJugadores.addEventListener('click', e => {
     const el = (e.target as HTMLElement).closest('button');
     if (!el) return;
-    const grupo = (el.parentElement as HTMLElement).dataset.opcion as 'vessel' | 'liquid' | undefined;
-    if (grupo && el.dataset.valor) {
-      (prep[grupo] as string) = el.dataset.valor;
-      el.parentElement!.querySelectorAll('.opcion').forEach(b => b.classList.toggle('elegida', b === el));
+    if (el.dataset.abrir) {
+      abrirElegir(el.dataset.abrir as Grupo);
     } else if (el.dataset.quitar) {
       names.splice(+el.dataset.quitar, 1);
       showPlayers();
@@ -219,6 +234,32 @@ export function startApp(root: HTMLElement) {
     try { history.pushState({ hoja: true }, ''); } catch { /* sin historial */ }
     ($('cerrar-info') as HTMLButtonElement).focus();
   }
+  /** Hoja desde abajo con todas las opciones de un grupo y la explicación de lo elegido. Elegir
+   * la cierra. Usa el mismo fondo que la hoja ⓘ. */
+  function abrirElegir(grupo: Grupo) {
+    const ids = [...(grupo === 'vessel' ? VESSEL_IDS : CONTENT_IDS), 'aleatorio'];
+    const info = infoDe(grupo, prep[grupo]);
+    const titulo = grupo === 'vessel' ? t.vaso : t.liquido;
+    hoja.innerHTML = `
+      <section class="hoja" role="dialog" aria-modal="true" aria-labelledby="hoja-titulo">
+        <header class="hoja-cab">
+          <h2 id="hoja-titulo">${titulo}</h2>
+          <button class="redondo" id="cerrar-info" aria-label="${t.cerrar}">×</button>
+        </header>
+        <div class="hoja-cuerpo">
+          <div class="opciones tres${grupo === 'vessel' ? ' vasos' : ''}">
+            ${ids.map(id => {
+              const [icono, nombre] = cabezaDe(grupo, id);
+              return `<button class="opcion${prep[grupo] === id ? ' elegida' : ''}" data-elegir="${grupo}" data-valor="${id}">${icono}${nombre}</button>`;
+            }).join('')}
+          </div>
+          <p class="elegir-info"><b>${cabezaDe(grupo, prep[grupo])[1]}</b> · ${info.texto}${info.nota ? ` <em>${info.nota}</em>` : ''}</p>
+        </div>
+      </section>`;
+    hoja.hidden = false;
+    try { history.pushState({ hoja: true }, ''); } catch { /* sin historial */ }
+    (hoja.querySelector('.opcion.elegida') as HTMLButtonElement | null)?.focus();
+  }
   function cerrarInfo() {
     if (hoja.hidden) return;
     if (history.state?.hoja) history.back();
@@ -227,7 +268,12 @@ export function startApp(root: HTMLElement) {
   window.addEventListener('popstate', () => { hoja.hidden = true; });
   hoja.addEventListener('click', e => {
     const el = e.target as HTMLElement;
-    if (el === hoja || el.closest('#cerrar-info')) cerrarInfo();
+    const opcion = el.closest<HTMLElement>('[data-elegir]');
+    if (opcion) {
+      (prep[opcion.dataset.elegir as Grupo] as string) = opcion.dataset.valor!;
+      cerrarInfo();
+      showPlayers();
+    } else if (el === hoja || el.closest('#cerrar-info')) cerrarInfo();
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarInfo(); });
 

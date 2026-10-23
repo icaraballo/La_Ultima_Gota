@@ -7,6 +7,10 @@ const infoVasos = {
   cilindro: { texto: 'Sube siempre al mismo ritmo, del fondo al borde. Lo que ves es lo que hay.', nota: 'El vaso para aprender.' },
   copa: { texto: 'Estrecha abajo y ancha arriba. Al principio sube muy rápido; arriba parece que no sube nada.', nota: 'Cuidado: arriba la gente se confía y suelta chorros largos.' },
   botella: { texto: 'Cuerpo ancho y cuello estrecho. Tarda muchísimo en subir, pero en el cuello cada gota se nota y casi no aguanta abombado.', nota: 'Cuidado: el cuello.' },
+  // v0.8.0: propuestos el 23-10-2026, pendientes de revisar jugando.
+  pecera: { texto: 'Panza ancha y boca estrecha. A medio llenar parece que falta muchísimo; en la boca, cada toque sube un montón.', nota: 'Cuidado: la boca.' },
+  tarta: { texto: 'Tres pisos, cada uno más estrecho que el de abajo. Al pasar de piso, lo mismo sube el doble de rápido, y el último se llena en nada.', nota: 'Cuidado: el salto de piso.' },
+  chupito: { texto: 'Pequeño y bajo: se llena en una o dos vueltas.', nota: 'Para una rápida.' },
 };
 const infoLiquidos = {
   agua: { texto: 'La de referencia. Corta casi en seco al soltar y se abomba un poco sobre el borde antes de rebosar.', nota: '' },
@@ -34,7 +38,9 @@ export const es = {
   empezar: 'Empezar',
   vaso: 'Vaso',
   liquido: 'Qué se echa',
-  vasos: { cilindro: 'Recto', copa: 'Copa', botella: 'Botella', aleatorio: 'Azar' },
+  vasoYContenido: 'Vaso y qué se echa',
+  azarTexto: 'Se sortea al empezar la partida.',
+  vasos: { cilindro: 'Recto', copa: 'Copa', botella: 'Botella', pecera: 'Pecera', tarta: 'Tarta', chupito: 'Chupito', aleatorio: 'Azar' },
   liquidos: { agua: 'Agua', aceite: 'Aceite', cerveza: 'Cerveza', canicas: 'Canicas', monedas: 'Monedas', aleatorio: 'Azar' },
   vasoAzar: 'Vaso al azar',
   liquidoAzar: 'Qué se echa, al azar',

@@ -1,3 +1,4 @@
+import { CONTENT_IDS } from '../src/core/contents';
 import { describe, expect, it } from 'vitest';
 import { config } from '../src/core/config';
 import { Game } from '../src/core/game';
@@ -423,9 +424,9 @@ describe('contenido: vasos, líquidos y espuma', () => {
     expect(`${g.vesselId}:${g.contentId}`).not.toBe(anterior);
   });
 
-  it('las 30 combinaciones se juegan hasta un ganador', () => {
+  it('las 36 combinaciones se juegan hasta un ganador', () => {
     for (const vessel of VESSEL_IDS) {
-      for (const liquid of ['agua', 'aceite', 'cerveza', 'canicas', 'monedas'] as const) {
+      for (const liquid of CONTENT_IDS) {
         const g = new Game(['A', 'B', 'C'], { seed: 5, vessel, content: liquid }, rapido);
         const r = createRng(9);
         for (let paso = 0; paso < 3000 && g.phase !== 'fin'; paso++) {
@@ -512,5 +513,44 @@ describe('canicas y monedas', () => {
       return g.pile!.pieces.map(p => [Math.round(p.x * 1000), Math.round(p.y * 1000)]);
     };
     expect(jugar()).toEqual(jugar());
+  });
+});
+
+describe('leche al fuego (v0.9.0)', () => {
+  const dt = 1 / 60;
+  const espera = (g: Game, s: number) => { for (let i = 0; i < s * 60; i++) g.step(dt); };
+
+  it('sube sola mientras el jugador duda, y no entre turnos', () => {
+    const g = new Game(['A', 'B'], { seed: 1, content: 'leche' });
+    espera(g, 2);
+    expect(g.glass.volume).toBe(0); // pantalla «Turno de», nadie la tiene
+    g.ready();
+    espera(g, 2);
+    expect(g.glass.volume).toBeCloseTo(2 * config.liquids.leche.rise, 3);
+  });
+
+  it('cada turno sube más rápido, y al vaciar el vaso vuelve a empezar', () => {
+    const g = new Game(['A', 'B'], { seed: 1, content: 'leche' });
+    const subidaDe = () => {
+      g.ready();
+      const antes = g.glass.volume;
+      espera(g, 1);
+      const sube = g.glass.volume - antes;
+      g.press(); g.release();
+      for (let i = 0; i < 600 && g.phase === 'echando'; i++) g.step(dt);
+      return sube;
+    };
+    const primera = subidaDe();
+    subidaDe();
+    const tercera = subidaDe();
+    expect(tercera).toBeCloseTo(primera * (1 + 2 * config.liquids.leche.riseGrow), 3);
+  });
+
+  it('quien se queda dudando la deja salir y pierde', () => {
+    const g = new Game(['A', 'B'], { seed: 1, content: 'leche' });
+    g.ready();
+    for (let i = 0; i < 60 * 600 && g.phase === 'echando'; i++) g.step(dt);
+    expect(g.phase).toBe('desborde');
+    expect(g.loser).toBe(0);
   });
 });

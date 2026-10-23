@@ -50,6 +50,8 @@ export const config = {
    * meniscus: cuánto se abomba sobre el borde, en ALTURA relativa (1 = alto del vaso): en el
    * cuello de la botella ese margen es muy poco volumen. foamPerFlow: espuma por volumen echado
    * a caudal máximo (las gotas, un 5 %). foamDecay (1/s): lo rápido que se asienta.
+   * rise (volumen/s): sube sola durante el turno, de «¡Listo!» a soltar (leche al fuego, v0.9.0);
+   * riseGrow: cuánto más rápido en cada turno de la ronda (0,15 = +15 % por turno).
    */
   /**
    * Canicas y monedas (UG-DESIGN §7.4), valores de serie del prototipo. Tamaños en píxeles del
@@ -68,9 +70,11 @@ export const config = {
   },
 
   liquids: {
-    agua: { flowMul: 1, inertia: 0.15, meniscus: 0.025, foamPerFlow: 0, foamDecay: 0.5 },
-    aceite: { flowMul: 0.8, inertia: 0.35, meniscus: 0.008, foamPerFlow: 0, foamDecay: 0.5 },
-    cerveza: { flowMul: 1, inertia: 0.15, meniscus: 0.02, foamPerFlow: 0.9, foamDecay: 0.5 },
+    agua: { flowMul: 1, inertia: 0.15, meniscus: 0.025, foamPerFlow: 0, foamDecay: 0.5, rise: 0, riseGrow: 0 },
+    aceite: { flowMul: 0.8, inertia: 0.35, meniscus: 0.008, foamPerFlow: 0, foamDecay: 0.5, rise: 0, riseGrow: 0 },
+    cerveza: { flowMul: 1, inertia: 0.15, meniscus: 0.02, foamPerFlow: 0.9, foamDecay: 0.5, rise: 0, riseGrow: 0 },
+    // Leche al fuego: medio volumen de gota por segundo de duda al principio; +15 % por turno.
+    leche: { flowMul: 1, inertia: 0.15, meniscus: 0.02, foamPerFlow: 0, foamDecay: 0.5, rise: 0.012, riseGrow: 0.15 },
   },
 };
 

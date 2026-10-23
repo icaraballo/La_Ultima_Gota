@@ -42,7 +42,7 @@ describe('sanearPreparacion()', () => {
     expect(sanearPreparacion({ names: ['A'.repeat(20), 'B'] }).names[0]).toBe('A'.repeat(MAX_NOMBRE));
   });
   it('vaso y contenido desconocidos vuelven a los de serie', () => {
-    const p = sanearPreparacion({ names: ['A', 'B'], vessel: 'faja', liquid: 'leche' });
+    const p = sanearPreparacion({ names: ['A', 'B'], vessel: 'faja', liquid: 'miel' });
     expect(p.vessel).toBe('cilindro');
     expect(p.liquid).toBe('agua');
   });

@@ -58,7 +58,7 @@ const PARAMS: { grupo: string; params: Param[] }[] = [
     top('flowNoiseRate', 'Ritmo fluctuación (/s)', 0.2, 6, 0.1),
     top('fallTime', 'Caída grifo→vaso (s)', 0.05, 1, 0.01),
   ] },
-  ...(['agua', 'aceite', 'cerveza'] as const).map(id => ({
+  ...(['agua', 'aceite', 'cerveza', 'leche'] as const).map(id => ({
     grupo: id[0].toUpperCase() + id.slice(1),
     params: [
       liq(id, 'flowMul', 'Caudal ×', 0.2, 2, 0.05),
@@ -67,6 +67,10 @@ const PARAMS: { grupo: string; params: Param[] }[] = [
       ...(id === 'cerveza' ? [
         liq(id, 'foamPerFlow', 'Espuma por chorro', 0, 3, 0.05),
         liq(id, 'foamDecay', 'Asentado (1/s)', 0.05, 3, 0.05),
+      ] : []),
+      ...(id === 'leche' ? [
+        liq(id, 'rise', 'Sube sola (vol/s)', 0, 0.06, 0.001),
+        liq(id, 'riseGrow', 'Más rápido por turno (+)', 0, 0.6, 0.01),
       ] : []),
     ],
   })),

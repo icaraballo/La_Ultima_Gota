@@ -1,7 +1,7 @@
 {
   "name": "la-ultima-gota",
   "private": true,
-  "version": "0.8.0",
+  "version": "0.9.0",
   "type": "module",
   "description": "Juego móvil por turnos: entre todos llenáis un vaso. Quien lo desborda, pierde.",
   "license": "MIT",

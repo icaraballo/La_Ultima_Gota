@@ -99,6 +99,8 @@ export const LIQUIDOS: Record<LiquidId, ColoresLiquido> = {
     cuerpo: '#E58A28', sombra: '#B9631A', superficie: '#FFF8EA', linea: '#FFFFFF', reflejo: '#F4AE57',
     espuma: '#FBF1DD', espumaSombra: '#E6D6B6', burbujas: '#FFD08A',
   },
+  // Leche: crema, no blanco puro (en el tema día el cristal es blanco). Burbujas de hervor.
+  leche: { cuerpo: '#F3EADB', sombra: '#D8CAB2', superficie: '#FFFBF3', linea: '#FFFFFF', reflejo: '#FFFDF8', burbujas: '#CDBB9C' },
 };
 
 /** Canicas: un color por variante (core elige el índice). Monedas: por tipo de COINS, de 1

@@ -90,6 +90,8 @@ export class Game {
   private pouredThisTurn = 0;
   private turnStartedAt = 0;
   private lastDropAt = 0;
+  /** Turnos ya jugados en esta ronda (la leche se calienta con ellos). */
+  private turnsThisRound = 0;
   /** Lo que duró la última pulsación (s), para el modo depuración. */
   lastHeld = 0;
 
@@ -212,6 +214,11 @@ export class Game {
       const arrived = this.faucet.step(dt);
       this.glass.step(dt);
       this.glass.add(arrived, this.faucet.arrivedFoam);
+      // Leche al fuego: sube sola mientras el jugador duda o echa, cada turno un poco más rápido.
+      const { rise, riseGrow } = this.glass.liquid;
+      if (rise > 0 && this.phase === 'echando' && !this.poured) {
+        this.glass.add(rise * (1 + riseGrow * this.turnsThisRound) * dt);
+      }
       if (this.phase === 'echando') this.pouredThisTurn += arrived;
     }
 
@@ -233,6 +240,7 @@ export class Game {
       if (this.time - this.quietSince >= cfg.turnEndDelay) {
         this.record(false);
         this.turn = (this.turn + 1) % this.order.length;
+        this.turnsThisRound++;
         this.phase = 'turno';
       }
     }
@@ -253,6 +261,7 @@ export class Game {
     }
     this.order = [...base.slice(start), ...base.slice(0, start)].filter(i => this.players[i].alive);
     this.turn = 0;
+    this.turnsThisRound = 0;
     this.loser = null;
     this.pressedAt = null;
     this.played.add(combo(this.vesselId, this.contentId));

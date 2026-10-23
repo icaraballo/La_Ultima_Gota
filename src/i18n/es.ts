@@ -15,6 +15,8 @@ const infoVasos = {
 const infoLiquidos = {
   agua: { texto: 'La de referencia. Corta casi en seco al soltar y se abomba un poco sobre el borde antes de rebosar.', nota: '' },
   aceite: { texto: 'Sale más despacio, pero es espeso y al soltar sigue cayendo un buen rato. Casi no se abomba: desborda en cuanto pasa del borde.', nota: 'Cuidado: suelta antes de lo que crees.' },
+  // v0.9.0: propuesto el 23-10-2026, pendiente de revisar jugando.
+  leche: { texto: 'Sube sola durante tu turno, desde «¡Listo!» hasta que sueltas, y cada turno un poco más rápido porque se va calentando.', nota: 'Cuidado: dudar también llena.' },
   cerveza: { texto: 'A chorro hace mucha espuma, y la espuma también desborda. Se asienta en unos segundos, y el siguiente la ve bajar. Las gotas casi no hacen espuma.', nota: 'Cuidado: un chorro fuerte, aunque quede hueco.' },
 };
 // Canicas y monedas (v0.7.0): textos propuestos, pendientes de que Iñigo los apruebe.
@@ -41,7 +43,7 @@ export const es = {
   vasoYContenido: 'Vaso y qué se echa',
   azarTexto: 'Se sortea al empezar la partida.',
   vasos: { cilindro: 'Recto', copa: 'Copa', botella: 'Botella', pecera: 'Pecera', tarta: 'Tarta', chupito: 'Chupito', aleatorio: 'Azar' },
-  liquidos: { agua: 'Agua', aceite: 'Aceite', cerveza: 'Cerveza', canicas: 'Canicas', monedas: 'Monedas', aleatorio: 'Azar' },
+  liquidos: { agua: 'Agua', aceite: 'Aceite', cerveza: 'Cerveza', leche: 'Leche al fuego', canicas: 'Canicas', monedas: 'Monedas', aleatorio: 'Azar' },
   vasoAzar: 'Vaso al azar',
   liquidoAzar: 'Qué se echa, al azar',
   empezarAleatorio: 'Empezar en orden aleatorio',

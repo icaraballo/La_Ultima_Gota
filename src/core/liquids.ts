@@ -15,6 +15,10 @@ export interface Liquid {
   foamPerFlow: number;
   /** Ritmo al que se asienta la espuma (1/s). */
   foamDecay: number;
+  /** Lo que sube sola por segundo durante el turno (leche al fuego; 0 = nada). */
+  rise: number;
+  /** Cuánto más rápido sube en cada turno de la ronda (0,15 = +15 %). */
+  riseGrow: number;
 }
 
 /** Vista viva de los parámetros: si el modo depuración cambia config, se nota al momento
@@ -28,5 +32,7 @@ export function getLiquid(id: LiquidId): Liquid {
     get meniscus() { return p.meniscus; },
     get foamPerFlow() { return p.foamPerFlow; },
     get foamDecay() { return p.foamDecay; },
+    get rise() { return p.rise; },
+    get riseGrow() { return p.riseGrow; },
   };
 }

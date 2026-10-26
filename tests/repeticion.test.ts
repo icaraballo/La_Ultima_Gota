@@ -53,6 +53,14 @@ describe('repetición a cámara lenta (v0.13.0)', () => {
     expect(fin.glass.overflowed).toBe(false); // sin regueros de agua en un vaso de canicas
   });
 
+  it('en el esmerilado, el doble del vaso lleva las mismas manchas', () => {
+    const g = new Game(['Ana', 'Luis'], { seed: 3, vessel: 'esmerilado' });
+    const rec = new Grabadora(DT);
+    hastaDesborde(g, rec);
+    expect(g.glass.spots.length).toBeGreaterThan(0);
+    expect(rec.reproductor(g)(0).glass.spots).toEqual(g.glass.spots);
+  });
+
   it('un turno nuevo borra lo grabado', () => {
     const g = new Game(['Ana', 'Luis'], { seed: 1 });
     const rec = new Grabadora(DT);

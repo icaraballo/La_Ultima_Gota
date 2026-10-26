@@ -11,9 +11,9 @@ const infoVasos = {
   pecera: { texto: 'Panza ancha y boca estrecha. A medio llenar parece que falta muchísimo; en la boca, cada toque sube un montón.', nota: 'Cuidado: la boca.' },
   tarta: { texto: 'Tres pisos, cada uno más estrecho que el de abajo. Al pasar de piso, lo mismo sube el doble de rápido, y el último se llena en nada.', nota: 'Cuidado: el salto de piso.' },
   chupito: { texto: 'Pequeño y bajo: se llena en una o dos vueltas.', nota: 'Para una rápida.' },
+  // Esmerilado: aprobado por Iñigo el 26-10-2026 (escarcha y manchas, v0.16.0).
+  esmerilado: { texto: 'Cristal esmerilado, con manchas que cambian cada ronda. El nivel se intuye, pero no se lee hasta que llega arriba.', nota: 'Fíate del oído.' },
   // v0.10.0: propuesto el 23-10-2026, pendiente de revisar jugando.
-  // v0.11.0: propuesto el 23-10-2026, pendiente de revisar jugando.
-  esmerilado: { texto: 'Cristal grueso que deforma. El nivel no está donde parece, y cada ronda engaña distinto.', nota: 'No te fíes de lo que ves.' },
   fuga: { texto: 'Tiene un agujero a media altura. Mientras os pasáis el móvil se va escapando un poco, hasta el agujero. Las canicas pequeñas y alguna moneda también se cuelan.', nota: 'Tardar en pasarlo ayuda al siguiente.' },
 };
 const infoLiquidos = {

@@ -14,8 +14,7 @@ export type Evento =
 export interface Estado {
   /** Chorro que cae ahora, de 0 a 1 (1 = caudal máximo). */
   chorro: number;
-  /** Nivel tal como se ve, 1 = el borde (en el esmerilado, el desplazado: no se chiva nada).
-   * Con piezas, la altura del montón. */
+  /** Nivel, 1 = el borde. Con piezas, la altura del montón. */
   nivel: number;
   /** Alguien está echando (de «¡Listo!» a que acaba su turno). */
   enJuego: boolean;
@@ -59,7 +58,7 @@ export class Observador {
   }
 
   estado(g: Game): Estado {
-    const nivel = g.pile ? g.pile.fill.height : g.glass.shownHeight;
+    const nivel = g.pile ? g.pile.fill.height : g.glass.height;
     return {
       chorro: Math.min(1, g.faucet.flow / this.flowMax),
       nivel,

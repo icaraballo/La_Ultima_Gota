@@ -55,12 +55,11 @@ describe('sonido y vibración: qué pasa (v0.14.0)', () => {
     expect(ev).toEqual([{ tipo: 'pieza', pieza: 'monedas', nivel: expect.any(Number) }]);
   });
 
-  it('el nivel es el que se ve: en el esmerilado no chiva el de verdad', () => {
+  it('en el esmerilado, el nivel es el de verdad (v0.16.0: ya no hay desvío)', () => {
     const g = new Game(['Ana', 'Luis'], { seed: 4, vessel: 'esmerilado' });
     g.glass.add(0.6);
     const obs = new Observador(config.flowMax);
-    expect(obs.estado(g).nivel).toBe(g.glass.shownHeight);
-    expect(obs.estado(g).nivel).not.toBe(g.glass.height);
+    expect(obs.estado(g).nivel).toBe(g.glass.height);
   });
 
   it('ronda nueva: no suena por lo que ya había', () => {

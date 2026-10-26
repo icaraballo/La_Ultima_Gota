@@ -42,7 +42,9 @@ const fuga = (key: keyof typeof config.leak, label: string, min: number, max: nu
   get: () => config.leak[key],
   set: v => { config.leak[key] = v; },
 });
-const esmerilado = (key: keyof typeof config.frosted, label: string, min: number, max: number, step: number): Param => ({
+/** Solo los campos numéricos (dangerZone y los demás pares no llevan slider). */
+type CampoEsmerilado = { [K in keyof typeof config.frosted]: (typeof config.frosted)[K] extends number ? K : never }[keyof typeof config.frosted];
+const esmerilado = (key: CampoEsmerilado, label: string, min: number, max: number, step: number): Param => ({
   label, min, max, step,
   get: () => config.frosted[key],
   set: v => { config.frosted[key] = v; },
@@ -98,9 +100,11 @@ const PARAMS: { grupo: string; params: Param[] }[] = [
     fuga('maxPerTurn', 'Tope por pase (vol)', 0, 0.3, 0.005),
     fuga('sizePx', 'Hueco para piezas (px)', 10, 60, 1),
   ] },
-  { grupo: 'Esmerilado (en la ronda siguiente)', params: [
-    esmerilado('maxOffset', 'Desvío máximo del nivel', 0, 0.25, 0.005),
-    esmerilado('minShare', 'Desvío mínimo (× máximo)', 0, 1, 0.05),
+  { grupo: 'Esmerilado', params: [
+    esmerilado('strength', 'Cuánta escarcha', 0, 1, 0.05),
+    esmerilado('spots', 'Manchas (ronda siguiente)', 0, 6, 1),
+    esmerilado('spotScale', 'Tamaño de las manchas (ronda siguiente)', 0.5, 2, 0.05),
+    esmerilado('spotOpacity', 'Lo que tapan las manchas', 0, 1, 0.05),
   ] },
   { grupo: 'Ronda', params: [
     top('meniscusVariance', 'Variación oculta (±)', 0, 0.5, 0.01),
@@ -257,7 +261,7 @@ export function createDebug(root: HTMLElement, barra: Vista) {
         `espuma    ${pct(glass.foam)}`,
         `altura    ${pct(glass.height)}`,
         `límite    ${pct(glass.limit)} (margen ${pct(glass.margin)})`,
-        ...(glass.illusion ? [`se ve     ${glass.illusion > 0 ? '+' : ''}${pct(glass.illusion)} de alto (esmerilado)`] : []),
+        ...(glass.vessel.frosted ? [`manchas    ${glass.spots.length}${glass.spots.length ? ` · la de arriba al ${pct(glass.spots[0].h)}` : ''}`] : []),
         `peligro   ${pct(glass.danger)}`,
         `caudal    ${faucet.flow.toFixed(3)} vol/s`,
         `en el aire ${pct(aire)}`,

@@ -14,7 +14,7 @@ export interface Vessel {
   capacity: number;
   /** Tiene un agujero en la pared (vaso con fuga); la altura está en config.leak. */
   leaks: boolean;
-  /** Cristal grueso que deforma (esmerilado): el nivel no se ve donde está. */
+  /** Cristal esmerilado: escarcha y manchas (las de cada ronda, en `Glass.spots`). */
   frosted: boolean;
   /** Radio respecto al del recto, a la altura h ∈ [0, 1]. */
   radius(h: number): number;
@@ -92,7 +92,7 @@ const vessels: Record<VesselId, Vessel> = {
   chupito: makeVessel('chupito', h => (46 + 10 * h) / 77.5, 0.4),
   // Con fuga (v0.10.0): un recto con un agujero a media altura (config.leak).
   fuga: makeVessel('fuga', () => 1, 1, true),
-  // Esmerilado (v0.11.0): un recto de cristal grueso; el desvío de cada ronda está en Glass.
+  // Esmerilado (v0.16.0): un recto con escarcha y manchas; las de cada ronda están en Glass.spots.
   esmerilado: makeVessel('esmerilado', () => 1, 1, false, true),
 };
 

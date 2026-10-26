@@ -53,7 +53,7 @@ export class Barra2D {
     const rimY = mesaY - gh;
     const spoutY = Math.max(24, rimY - Math.max(70, h * 0.18));
 
-    const level = glass.shownHeight;
+    const level = glass.height;
     const surfaceY = mesaY - Math.min(level, 1) * gh;
     const dome = Math.max(0, level - 1) * gh * MENISCO_VISIBLE;
 
@@ -158,6 +158,27 @@ export class Barra2D {
         ctx.beginPath();
         ctx.arc(cx + o.x * kx, mesaY - o.y * ky, (o.kind === 'canicas' ? o.w : o.w / 2) * kx + 6, 0, Math.PI * 2);
         ctx.stroke();
+      }
+    }
+
+    // Esmerilado (v0.16.0): sin desenfoque (es la vista provisional), un velo del color del
+    // cristal en todo el vaso y las manchas de la ronda, con el borde difuminado.
+    if (glass.vessel.frosted) {
+      const f = config.frosted;
+      ctx.fillStyle = `rgba(255,246,232,${0.75 * f.strength})`;
+      ctx.fillRect(left, rimY, gw, gh);
+      for (const m of glass.spots) {
+        ctx.save();
+        ctx.translate(cx + m.s * gw / 2, mesaY - m.h * gh);
+        ctx.scale(m.rs * gw / 2, m.rh * gh);
+        const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+        g.addColorStop(0, `rgba(255,246,232,${f.spotOpacity})`);
+        g.addColorStop(1, 'rgba(255,246,232,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(0, 0, 1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
     }
 

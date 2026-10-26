@@ -91,11 +91,22 @@ export const config = {
   leak: { height: 0.45, rate: 0.006, maxPerTurn: 0.015, sizePx: 30 },
 
   /**
-   * Esmerilado (v0.11.0): el cristal grueso deforma y el nivel se ve desplazado `maxOffset`
-   * (altura relativa) como mucho, hacia arriba o hacia abajo, distinto en cada ronda y nunca
-   * menos del `minShare` del máximo. Solo cambia lo que se ve, no cuándo desborda.
+   * Esmerilado (v0.16.0, decisión de Iñigo del 26-10-2026; sustituye al desvío de la v0.11.0):
+   * escarcha que desenfoca lo que hay detrás del cristal y manchas más opacas, distintas en cada
+   * ronda. Solo cambia lo que se ve, no cuándo desborda.
+   * strength: cuánta escarcha, de 0 (cristal normal) a 1 (a tope; de serie).
+   * blur: desenfoque a tope (sigma de un gaussiano), en alto del vaso. tint: velo del color del
+   * cristal a tope (0–1). Los dos se multiplican por strength.
+   * spots: manchas por ronda. La primera cae entre dangerZone[0] y dangerZone[1] de alto (la zona
+   * de peligro); las demás, entre zone[0] y zone[1]. spotX: el centro cae entre −spotX y spotX de
+   * ancho (−1 izquierda, 1 derecha). spotH / spotS: radio de cada mancha en alto (fracción del
+   * vaso) y en ancho, mínimo y máximo; spotScale los multiplica. spotOpacity: cuánto tapa el centro.
    */
-  frosted: { maxOffset: 0.08, minShare: 0.4 },
+  frosted: {
+    strength: 1, blur: 0.075, tint: 0.4,
+    spots: 3, dangerZone: [0.62, 0.9], zone: [0.08, 0.92], spotX: 0.55,
+    spotH: [0.08, 0.17], spotS: [0.4, 0.72], spotScale: 1, spotOpacity: 0.9,
+  },
 
   liquids: {
     agua: { flowMul: 1, inertia: 0.15, meniscus: 0.025, foamPerFlow: 0, foamDecay: 0.5, rise: 0, riseGrow: 0 },

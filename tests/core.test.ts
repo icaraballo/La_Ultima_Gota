@@ -606,28 +606,47 @@ describe('vaso con fuga (v0.10.0)', () => {
   });
 });
 
-describe('esmerilado (v0.11.0)', () => {
-  it('el nivel se ve desplazado, distinto en cada ronda, sin cambiar cuándo desborda', () => {
-    const { maxOffset, minShare } = config.frosted;
-    const vasos = Array.from({ length: 40 }, (_, i) => new Glass(getVessel('esmerilado'), agua, createRng(i), config));
-    for (const g of vasos) {
-      expect(Math.abs(g.illusion)).toBeGreaterThanOrEqual(maxOffset * minShare - 1e-9);
-      expect(Math.abs(g.illusion)).toBeLessThanOrEqual(maxOffset + 1e-9);
+describe('esmerilado (v0.16.0)', () => {
+  const f = config.frosted;
+  const esmerilado = (seed: number, cfg = config) => new Glass(getVessel('esmerilado'), agua, createRng(seed), cfg);
+  const dentro = (x: number, [a, b]: readonly number[], k = 1) => x >= a * k - 1e-9 && x <= b * k + 1e-9;
+
+  it('tres manchas por ronda: la primera en la zona de peligro, las demás donde caigan', () => {
+    for (let i = 0; i < 40; i++) {
+      const g = esmerilado(i);
+      expect(g.spots).toHaveLength(3);
+      expect(dentro(g.spots[0].h, f.dangerZone)).toBe(true);
+      for (const m of g.spots.slice(1)) expect(dentro(m.h, f.zone)).toBe(true);
+      for (const m of g.spots) {
+        expect(Math.abs(m.s)).toBeLessThanOrEqual(f.spotX);
+        expect(dentro(m.rh, f.spotH, f.spotScale)).toBe(true);
+        expect(dentro(m.rs, f.spotS, f.spotScale)).toBe(true);
+      }
     }
-    expect(vasos.some(g => g.illusion > 0) && vasos.some(g => g.illusion < 0)).toBe(true);
-    const g = vasos[0];
-    const recto = new Glass(getVessel('cilindro'), agua, createRng(0), config);
-    expect(g.limit).toBeCloseTo(recto.limit, 9); // mismo margen: el desvío no gasta azar del menisco
-    g.add(0.6);
-    expect(g.shownHeight - g.height).toBeCloseTo(g.illusion, 9);
-    expect(g.shown(0)).toBe(0);
   });
 
-  it('los demás vasos se ven tal cual', () => {
-    const g = new Glass(getVessel('cilindro'), agua, createRng(1), config);
-    g.add(0.5);
-    expect(g.illusion).toBe(0);
-    expect(g.shownHeight).toBe(g.height);
+  it('cambian de una ronda a otra y se repiten con la misma semilla', () => {
+    expect(esmerilado(1).spots).not.toEqual(esmerilado(2).spots);
+    expect(esmerilado(7).spots).toEqual(esmerilado(7).spots);
+  });
+
+  it('spots 0 da cero manchas; spotScale 2, el doble de grandes', () => {
+    expect(esmerilado(3, { ...config, frosted: { ...f, spots: 0 } }).spots).toHaveLength(0);
+    const normal = esmerilado(3), grande = esmerilado(3, { ...config, frosted: { ...f, spotScale: 2 } });
+    grande.spots.forEach((m, i) => {
+      expect(m.rh).toBeCloseTo(normal.spots[i].rh * 2, 9);
+      expect(m.rs).toBeCloseTo(normal.spots[i].rs * 2, 9);
+    });
+  });
+
+  it('los demás vasos no tienen manchas ni gastan azar; el esmerilado desborda igual que el recto', () => {
+    for (const id of VESSEL_IDS.filter(v => v !== 'esmerilado')) {
+      expect(new Glass(getVessel(id), agua, createRng(1), config).spots).toHaveLength(0);
+    }
+    const g = esmerilado(5), recto = new Glass(getVessel('cilindro'), agua, createRng(5), config);
+    expect(g.limit).toBeCloseTo(recto.limit, 9); // las manchas se sortean después del margen
+    g.add(0.6); recto.add(0.6);
+    expect(g.height).toBeCloseTo(recto.height, 9);
   });
 });
 

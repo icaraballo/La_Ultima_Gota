@@ -89,6 +89,82 @@ const FS_PLANO = /* glsl */ `
     #include <colorspace_fragment>
   }`;
 
+// Esmerilado (v0.16.0): la funda de escarcha. Lee la escena ya desenfocada (uBlur) en su píxel,
+// le pone un velo del color del cristal, aclara los cantos, añade grano fijo y las manchas de la
+// ronda (h de 0 a 1 en alto, s de −1 a 1 en ancho; radios a cero = sin mancha).
+const MAX_SPOTS = 6;
+const VS_FROST = /* glsl */ `
+  uniform float uGH;
+  uniform float uRad;
+  varying float vH;
+  varying float vS;
+  void main() {
+    vH = position.y / uGH;
+    vS = position.x / uRad;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }`;
+const FS_FROST = /* glsl */ `
+  uniform sampler2D uBlur;
+  uniform vec2 uRes;
+  uniform vec3 uCristal;
+  uniform float uTint;
+  uniform float uStrength;
+  uniform float uSpotOpacity;
+  uniform vec4 uSpots[${MAX_SPOTS}];
+  varying float vH;
+  varying float vS;
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+  // Las capas se mezclan en sRGB, como en la maqueta (SVG): en lineal, el velo y el grano blanquean
+  // mucho más de lo que se aprobó.
+  vec3 aSrgb(vec3 c) { return pow(max(c, 0.0), vec3(1.0 / 2.2)); }
+  void main() {
+    vec3 cristal = aSrgb(uCristal);
+    vec3 col = aSrgb(texture2D(uBlur, gl_FragCoord.xy / uRes).rgb);
+    col = mix(col, cristal, uTint * uStrength);
+    col = mix(col, vec3(1.0), smoothstep(0.55, 1.0, abs(vS)) * 0.5 * (0.3 + 0.7 * uStrength));
+    // Grano como el de la maqueta (ruido blanco con alfa 1,5·n − 0,62): dos muestras, para que se
+    // agrupe en torno a la media como el fractalNoise.
+    vec2 q = floor(gl_FragCoord.xy);
+    float n = 0.5 * (hash(q) + hash(q + 17.0));
+    col = mix(col, vec3(1.0), clamp(1.5 * n - 0.62, 0.0, 1.0) * (0.2 + 0.45 * uStrength));
+    float w = 0.0;
+    for (int i = 0; i < ${MAX_SPOTS}; i++) {
+      vec4 m = uSpots[i];
+      if (m.z <= 0.0) continue;
+      float d = length(vec2((vH - m.x) / m.z, (vS - m.y) / m.w));
+      w = max(w, 1.0 - smoothstep(0.55, 1.0, d));
+    }
+    col = mix(col, cristal, w * uSpotOpacity);
+    gl_FragColor = vec4(pow(col, vec3(2.2)), 1.0);
+    #include <colorspace_fragment>
+  }`;
+/** Gaussiano separable de una pasada (uDir: un téxel en horizontal o en vertical). */
+const VS_QUAD = /* glsl */ `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = vec4(position.xy, 0.0, 1.0);
+  }`;
+const FS_BLUR = /* glsl */ `
+  uniform sampler2D uTex;
+  uniform vec2 uDir;
+  uniform float uSigma;
+  varying vec2 vUv;
+  void main() {
+    vec4 s = vec4(0.0);
+    float total = 0.0;
+    for (int i = -15; i <= 15; i++) {
+      float x = float(i);
+      float w = exp(-x * x / (2.0 * uSigma * uSigma));
+      s += texture2D(uTex, vUv + uDir * x) * w;
+      total += w;
+    }
+    gl_FragColor = s / total;
+    #include <colorspace_fragment>
+  }`;
+/** Sigma de una pasada como mucho (el núcleo llega a 3 sigmas: 15 téxeles). */
+const BLUR_SIGMA_MAX = 5;
+
 /** Dos tonos: claro hacia la luz, oscuro en el lado derecho. */
 function toon(claro: string, oscuro: string, umbral = 0.43) {
   return new THREE.ShaderMaterial({
@@ -263,8 +339,36 @@ export class Escena3D {
   private outRingMat = basic('#e8735f');
   private color = new THREE.Color();
 
-  /** Esmerilado: brillos de más que dan aspecto de cristal grueso. */
-  private glassThick = [0, 1, 2].map(() => new THREE.Mesh(new THREE.BufferGeometry(), basic('#FFF4E2', { transparent: true, opacity: 0.22, depthWrite: false })));
+  /** Esmerilado (v0.16.0): la funda de escarcha, solo la cara de delante (por la boca se ve nítido). */
+  private frostMat = new THREE.ShaderMaterial({
+    uniforms: {
+      uBlur: { value: null as THREE.Texture | null }, uRes: { value: new THREE.Vector2(1, 1) },
+      uCristal: { value: new THREE.Color('#fff') }, uTint: { value: 0 }, uStrength: { value: 0 },
+      uSpotOpacity: { value: 0 }, uGH: { value: H }, uRad: { value: R },
+      uSpots: { value: Array.from({ length: MAX_SPOTS }, () => new THREE.Vector4()) },
+    },
+    vertexShader: VS_FROST,
+    fragmentShader: FS_FROST,
+    side: THREE.FrontSide,
+    transparent: true,
+    depthWrite: false,
+  });
+  private frost = new THREE.Mesh(new THREE.BufferGeometry(), this.frostMat);
+  /** El desenfoque: la escena sin la funda a poca resolución y dos pasadas por repetición. */
+  private blurRT = [0, 1, 2].map(() => {
+    const rt = new THREE.WebGLRenderTarget(1, 1, { depthBuffer: true });
+    rt.texture.colorSpace = THREE.SRGBColorSpace;
+    return rt;
+  });
+  private blurMat = new THREE.ShaderMaterial({
+    uniforms: { uTex: { value: null as THREE.Texture | null }, uDir: { value: new THREE.Vector2() }, uSigma: { value: 1 } },
+    vertexShader: VS_QUAD,
+    fragmentShader: FS_BLUR,
+    depthTest: false,
+    depthWrite: false,
+  });
+  private blurScene = new THREE.Scene();
+  private blurCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   /** Vaso con fuga: el agujero (un disco de tinta en el cristal) y el chorrito que sale. */
   private hole = new THREE.Mesh(new THREE.CircleGeometry(0.07, 18), basic('#140B08'));
   private leakMat = basic('#4FA9E6');
@@ -395,6 +499,9 @@ export class Escena3D {
     this.puddleHi.position.y = 0.005;
 
     this.limitRing.rotation.x = Math.PI / 2;
+    this.frost.visible = false;
+    this.frost.renderOrder = 2.5;
+    this.blurScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.blurMat));
     // El cristal y sus brillos, después de lo opaco; la tinta del aro, antes que el aro.
     this.glass.renderOrder = 2;
     for (const g of this.glassHi) g.renderOrder = 3;
@@ -405,7 +512,7 @@ export class Escena3D {
       ...this.foamDots, this.bubbles, this.drops, this.dropsInk, this.dropsHi, this.stream, this.streamInk,
       this.streamHi, this.bits, this.bitsInk, ...this.ripples, ...this.rivers, ...this.riversInk,
       this.puddleInk, this.puddle, this.puddleHi, this.glass, ...this.glassHi, this.glassLine,
-      this.rimInk, this.rim, this.limitRing, this.hole, this.leakStream, ...this.glassThick);
+      this.rimInk, this.rim, this.limitRing, this.hole, this.leakStream, this.frost);
     this.setTema('noche');
   }
 
@@ -484,7 +591,8 @@ export class Escena3D {
     this.inkBasic.color.set(c.tinta);
     this.rimInkMat.color.set(c.tinta);
     this.glassMat.color.set(c.cristal);
-    this.glassMat.opacity = c.cristalOpacidad * (this.vessel?.frosted ? 2.6 : 1);
+    this.glassMat.opacity = c.cristalOpacidad;
+    this.frostMat.uniforms.uCristal.value.set(c.cristal);
     this.rimMat.color.set(c.aro);
     this.tableTop.color.set(c.tablero);
     this.tableLine.color.set(c.tableroLinea);
@@ -660,15 +768,13 @@ export class Escena3D {
       m.position.y = GH;
     }
 
-    // Esmerilado: cristal más opaco y con más brillos, como grueso.
-    this.glassMat.opacity = this.tema.cristalOpacidad * (v.frosted ? 2.6 : 1);
-    this.glassThick.forEach(m => { m.visible = v.frosted; });
+    // Esmerilado: la funda de escarcha, torneada con el perfil del cristal, y los brillos más suaves.
+    this.glassHiMat.opacity = v.frosted ? 0.3 : 0.55;
     if (v.frosted) {
-      const franjas: [number, number, number, number][] = [[0.05, 0.95, -0.5, -0.38], [0.15, 0.7, 0.3, 0.42], [0.4, 0.98, 0.82, 0.9]];
-      franjas.forEach(([h0, h1, s0, s1], i) => {
-        this.glassThick[i].geometry.dispose();
-        this.glassThick[i].geometry = band(v, h0, h1, s0, s1, GLASS + 0.006);
-      });
+      this.frost.geometry.dispose();
+      this.frost.geometry = new THREE.LatheGeometry(profile(v, 0, 1, GLASS + 0.002), SEGMENTS);
+      this.frostMat.uniforms.uGH.value = GH;
+      this.frostMat.uniforms.uRad.value = R * v.radius(0.5) * (GLASS + 0.002);
     }
 
     // Agujero del vaso con fuga, girado hacia la derecha para que se vea de frente a medias.
@@ -804,14 +910,18 @@ export class Escena3D {
       this.lastLiquid = this.lastFoamTop = this.lastSurfR = this.lastDome = -1;
       this.splashes = [];
       this.prevDrops.clear();
+      const spots = this.frostMat.uniforms.uSpots.value as THREE.Vector4[];
+      spots.forEach((m, i) => {
+        const s = glass.spots[i];
+        if (s) m.set(s.h, s.s, s.rh, s.rs); else m.set(0, 0, 0, 0);
+      });
     }
     const v = this.vessel!;
     const l = LIQUIDOS[liquidId];
 
     // Alturas: líquido, espuma encima y, si pasa del borde, la cúpula del menisco.
-    // En el esmerilado, desplazadas: se dibuja lo que se ve, no lo que hay.
-    const top = glass.shownHeight;
-    const liquidTop = Math.min(glass.shownLiquidHeight, 1);
+    const top = glass.height;
+    const liquidTop = Math.min(glass.liquidHeight, 1);
     const capped = Math.min(top, 1);
     const dome = Math.max(0, top - 1) * GH * MENISCO_VISIBLE;
     const hasFoam = capped - liquidTop >= 0.002;
@@ -1049,6 +1159,51 @@ export class Escena3D {
       this.limitRing.scale.setScalar(R * v.radius(1) * 1.15);
     }
 
+    // Esmerilado: primero la escena sin la funda, desenfocada; luego la funda la lee.
+    const frosted = v.frosted && config.frosted.strength > 0;
+    this.frost.visible = false;
+    if (frosted) {
+      this.blurPass();
+      this.frost.visible = true;
+    }
     this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Desenfoca lo que hay detrás del cristal: la escena a 1/4 (o 1/8) y gaussianos separables. */
+  private blurPass() {
+    const f = config.frosted, r = this.renderer;
+    const size = r.getDrawingBufferSize(new THREE.Vector2());
+    // Sigma en píxeles: una fracción del alto del vaso en pantalla.
+    const a = new THREE.Vector3(0, 0, 0).project(this.camera), b = new THREE.Vector3(0, GH, 0).project(this.camera);
+    const altoPx = Math.abs(b.y - a.y) / 2 * size.y;
+    let div = 4, sigma = f.blur * f.strength * altoPx / div;
+    // Si una pareja de pasadas no llega, se baja a 1/8: con la escarcha de serie (sigma ≈ 10 a 1/4
+    // en un móvil de 390) eran 4 parejas y el esmerilado iba a la mitad de imágenes que el recto.
+    if (sigma > BLUR_SIGMA_MAX) { div = 8; sigma /= 2; }
+    const w = Math.max(1, Math.round(size.x / div)), h = Math.max(1, Math.round(size.y / div));
+    for (const rt of this.blurRT) if (rt.width !== w || rt.height !== h) rt.setSize(w, h);
+    const [escena, ida, vuelta] = this.blurRT;
+    r.setRenderTarget(escena);
+    r.render(this.scene, this.camera);
+    let src = escena;
+    if (sigma > 0.3) {
+      const pasadas = Math.ceil(sigma * sigma / (BLUR_SIGMA_MAX * BLUR_SIGMA_MAX));
+      const u = this.blurMat.uniforms;
+      u.uSigma.value = sigma / Math.sqrt(pasadas);
+      for (let i = 0; i < pasadas; i++) {
+        u.uTex.value = src.texture; u.uDir.value.set(1 / w, 0);
+        r.setRenderTarget(ida); r.render(this.blurScene, this.blurCam);
+        u.uTex.value = ida.texture; u.uDir.value.set(0, 1 / h);
+        r.setRenderTarget(vuelta); r.render(this.blurScene, this.blurCam);
+        src = vuelta;
+      }
+    }
+    r.setRenderTarget(null);
+    const fu = this.frostMat.uniforms;
+    fu.uBlur.value = src.texture;
+    fu.uRes.value.copy(size);
+    fu.uTint.value = f.tint;
+    fu.uStrength.value = f.strength;
+    fu.uSpotOpacity.value = f.spotOpacity;
   }
 }

@@ -621,7 +621,7 @@ export class Escena3D {
     const hubGeo = new THREE.SphereGeometry(10 * PX, 16, 12);
     const hub = new THREE.Mesh(hubGeo, this.metal);
     const hubInk = new THREE.Mesh(hubGeo, this.ink.faucet);
-    // Palanca acortada (v0.16.0, UB-02): con 28 px y el pomo a 42, a tope (65°) se salía por arriba.
+    // Palanca acortada (v0.16.0, UB-07): con 28 px y el pomo a 42, a tope (65°) se salía por arriba.
     const barGeo = new THREE.CapsuleGeometry(6 * PX, 20 * PX, 4, 12);
     barGeo.rotateZ(Math.PI / 2);
     barGeo.translate(16 * PX, 0, 0);

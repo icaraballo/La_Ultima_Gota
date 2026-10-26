@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { TEMA_IDS, TEMAS } from '../src/render/temas';
 
 // Retoque de arte (v0.16.0): los colores nuevos de la escena, en los dos temas, y la letra de los
-// nombres (UB-03).
+// nombres (UB-08).
 
 const HEX = /^#[0-9A-Fa-f]{6}$/;
 
@@ -20,7 +20,7 @@ describe('temas: colores del retoque de arte (v0.16.0)', () => {
   }
 });
 
-describe('letra (UB-03)', () => {
+describe('letra (UB-08)', () => {
   it("estilos.css no pide 'Fredoka' sin Variable: la letra alojada se llama 'Fredoka Variable'", () => {
     const css = readFileSync(new URL('../src/ui/estilos.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
     expect(css).not.toMatch(/'Fredoka'(?! Variable)/);

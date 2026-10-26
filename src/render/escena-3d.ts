@@ -36,6 +36,20 @@ const TILT = THREE.MathUtils.degToRad(9);
 const SOLID_K = H / SOLID_PX_PER_H;
 const MAX_PIECES = 400;
 
+// Retoque de arte (v0.16.0, opción A y 4A del 26-10-2026). Solo aspecto: no son de jugabilidad.
+/** Alto del culo de cristal grueso. La mesa baja lo mismo, así el vaso no se mueve. */
+const BASE = 0.08 * H;
+/** El líquido, al 95 % del radio: se ve la pared entre él y el contorno. */
+const LIQ_R = 0.95;
+/** Corona del desborde: gotas que saltan del borde una vez, y cuánto dura. */
+const CORONA_N = 9;
+const CORONA_S = 0.7;
+/** Onda que se abre en el borde al desbordar. */
+const ONDA_S = 0.6;
+const ONDA_CRECE = 0.35;
+/** Viñeta: transparente hasta esta fracción del radio, del todo en las esquinas. */
+const VINETA_DESDE = 0.55;
+
 /** Luz en espacio de cámara: de arriba a la izquierda, así la sombra cae a la derecha. */
 const LUZ = new THREE.Vector3(-0.6, 0.3, 0.75).normalize();
 
@@ -239,6 +253,28 @@ function radialTexture() {
   return new THREE.CanvasTexture(c);
 }
 
+/** Viñeta (v0.16.0): transparente en el centro y opaca en las esquinas (el color va en el material). */
+function vignetteTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d')!;
+  const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128 * Math.SQRT2);
+  g.addColorStop(0, 'rgba(255,255,255,0)');
+  g.addColorStop(VINETA_DESDE, 'rgba(255,255,255,0)');
+  g.addColorStop(1, 'rgba(255,255,255,1)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 256, 256);
+  return new THREE.CanvasTexture(c);
+}
+
+/** Corona del desborde: ángulo en el frente del borde, velocidad hacia arriba y radio (px). Fijas,
+ * así la repetición a cámara lenta sale igual. */
+const CORONA = Array.from({ length: CORONA_N }, (_, i) => {
+  const a = THREE.MathUtils.degToRad(-80 + 160 * i / (CORONA_N - 1));
+  const k = (i * 0.618) % 1;
+  return { a, vy: 1.2 + 0.6 * k, vh: 0.2 + 0.35 * Math.abs(Math.sin(a)), r: 5 + 1.5 * ((i * 0.37) % 1) };
+});
+
 interface Splash { t0: number }
 
 export class Escena3D {
@@ -250,7 +286,7 @@ export class Escena3D {
   private temaId: TemaId = 'noche';
 
   // Contornos: un material por grosor (en px de un móvil de 390).
-  private ink = { faucet: hullMat(4.5), drop: hullMat(3), stream: hullMat(1.6), river: hullMat(2.8), tiny: hullMat(2) };
+  private ink = { faucet: hullMat(4.5), drop: hullMat(3), stream: hullMat(1.6), river: hullMat(3.4), tiny: hullMat(2) };
   private inkBasic = basic('#000');
 
   // Fondo
@@ -269,8 +305,17 @@ export class Escena3D {
   // Solo la pared de atrás: tiñe lo que se ve por encima del líquido, nunca el líquido.
   private glassMat = basic('#fff', { transparent: true, opacity: 0.13, side: THREE.BackSide, depthWrite: false });
   private glass = new THREE.Mesh(undefined, this.glassMat);
-  private glassHiMat = basic('#fff', { transparent: true, opacity: 0.55, depthWrite: false });
-  private glassHi = [new THREE.Mesh(undefined, this.glassHiMat), new THREE.Mesh(undefined, this.glassHiMat)];
+  // Reflejos: el ancho y el fino de la izquierda, y el de la derecha (con su opacidad cada uno).
+  private glassHiMats = [0.6, 0.55, 0.4].map(o => basic('#fff', { transparent: true, opacity: o, depthWrite: false }));
+  private glassHi = this.glassHiMats.map(m => new THREE.Mesh(undefined, m));
+  /** Franjas de pared en los laterales (la izquierda, más marcada). */
+  private wallBandMats = [0.28, 0.18].map(o => basic('#fff', { transparent: true, opacity: o, depthWrite: false }));
+  private wallBands = this.wallBandMats.map(m => new THREE.Mesh(undefined, m));
+  /** Culo de cristal grueso y su brillo curvo delante. */
+  private baseMat = basic('#fff', { transparent: true, depthWrite: false });
+  private base = new THREE.Mesh(undefined, this.baseMat);
+  private baseHiMat = basic('#fff', { transparent: true, opacity: 0.6, depthWrite: false });
+  private baseHi = new THREE.Mesh(undefined, this.baseHiMat);
   private glassLine = new THREE.Mesh(undefined, this.inkBasic);
   private rimInkMat = basic('#000', { depthWrite: false });
   private rimInk = new THREE.Mesh(undefined, this.rimInkMat);
@@ -283,6 +328,9 @@ export class Escena3D {
   private surfaceMat = basic('#000', { side: THREE.DoubleSide });
   private lineMat = basic('#000', { side: THREE.DoubleSide });
   private glossMat = basic('#000', { transparent: true, opacity: 0.7 });
+  /** Brillo elíptico de la superficie. */
+  private surfHiMat = basic('#000', { transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide });
+  private surfHi = new THREE.Mesh(new THREE.CircleGeometry(1, 24), this.surfHiMat);
   private foamDotMat = basic('#000', { side: THREE.DoubleSide });
   private bubbleMat = basic('#000', { transparent: true, opacity: 0.8 });
   private liquidBody = new THREE.Mesh(undefined, this.liquidMat);
@@ -316,6 +364,13 @@ export class Escena3D {
   private puddle = new THREE.Mesh(undefined, this.puddleMat);
   private puddleInk = new THREE.Mesh(undefined, this.inkBasic);
   private puddleHi = new THREE.Mesh(undefined, this.lineMat);
+  /** Brillo fino en dos regueros (el lateral izquierdo y el de delante a la izquierda). */
+  private riversHi = [new THREE.Mesh(undefined, this.lineMat), new THREE.Mesh(undefined, this.lineMat)];
+  private waveMat = basic('#fff', { transparent: true, side: THREE.DoubleSide, depthWrite: false });
+  private wave = new THREE.Mesh(undefined, this.waveMat);
+  /** Viñeta: una segunda pasada encima de todo, con su cámara. */
+  private vignetteMat: THREE.MeshBasicMaterial;
+  private vignetteScene = new THREE.Scene();
 
   // Grifo
   private metal = toon('#000', '#000', 0.2);
@@ -370,7 +425,8 @@ export class Escena3D {
   private blurScene = new THREE.Scene();
   private blurCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   /** Vaso con fuga: el agujero (un disco de tinta en el cristal) y el chorrito que sale. */
-  private hole = new THREE.Mesh(new THREE.CircleGeometry(0.07, 18), basic('#140B08'));
+  private holeMat = basic('#000');
+  private hole = new THREE.Mesh(new THREE.CircleGeometry(0.07, 18), this.holeMat);
   private leakMat = basic('#4FA9E6');
   private leakStream = new THREE.Mesh(new THREE.BufferGeometry(), this.leakMat);
   private limitRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.01, 6, SEGMENTS), basic('#e8735f'));
@@ -405,15 +461,16 @@ export class Escena3D {
       return m;
     };
     const depth = TABLE_FRONT - WALL_Z;
-    const top = flat(60, depth, this.tableTop, (TABLE_FRONT + WALL_Z) / 2);
-    const lines = [-0.85, 0.47].map(z => flat(60, 0.11, this.tableLine, z, 0.001));
-    const lip = flat(60, 0.13, this.tableLip, TABLE_FRONT - 0.065, 0.001);
+    // La mesa queda a −BASE para hacer sitio al culo grueso del vaso (v0.16.0).
+    const top = flat(60, depth, this.tableTop, (TABLE_FRONT + WALL_Z) / 2, -BASE);
+    const lines = [-0.85, 0.47].map(z => flat(60, 0.11, this.tableLine, z, -BASE + 0.001));
+    const lip = flat(60, 0.13, this.tableLip, TABLE_FRONT - 0.065, -BASE + 0.001);
     const edge = new THREE.Mesh(new THREE.PlaneGeometry(60, 0.28), this.tableEdge);
-    edge.position.set(0, -0.14, TABLE_FRONT);
+    edge.position.set(0, -BASE - 0.14, TABLE_FRONT);
     const under = new THREE.Mesh(new THREE.PlaneGeometry(60, 20), this.tableUnder);
-    under.position.set(0, -10.28, TABLE_FRONT);
+    under.position.set(0, -BASE - 10.28, TABLE_FRONT);
     this.shadowMat = basic('#000', { map: radialTexture(), transparent: true, opacity: 0.35, depthWrite: false });
-    this.shadow = flat(2, 2, this.shadowMat, 0, 0.002);
+    this.shadow = flat(2, 2, this.shadowMat, 0, -BASE + 0.002);
     this.shadow.renderOrder = 1;
     scene.add(this.wall, top, ...lines, lip, edge, under, this.shadow);
 
@@ -468,8 +525,8 @@ export class Escena3D {
     this.stream = new THREE.InstancedMesh(cyl, this.liquidMat, MAX_STREAM);
     this.streamInk = new THREE.InstancedMesh(cyl, this.ink.stream, MAX_STREAM);
     this.streamHi = new THREE.InstancedMesh(cyl, this.lineMat, MAX_STREAM);
-    this.bits = new THREE.InstancedMesh(ball, this.liquidMat, MAX_SPLASH * 3 + 3);
-    this.bitsInk = new THREE.InstancedMesh(ball, this.ink.tiny, MAX_SPLASH * 3 + 3);
+    this.bits = new THREE.InstancedMesh(ball, this.liquidMat, MAX_SPLASH * 3 + 6 + CORONA_N);
+    this.bitsInk = new THREE.InstancedMesh(ball, this.ink.tiny, MAX_SPLASH * 3 + 6 + CORONA_N);
     for (const m of [this.drops, this.dropsInk, this.dropsHi, this.stream, this.streamInk, this.streamHi, this.bits, this.bitsInk, this.bubbles]) {
       m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       // Su volumen de recorte se calcula una vez y, si fue con 0 instancias, no se pintarían nunca.
@@ -494,9 +551,18 @@ export class Escena3D {
       this.riversInk.push(ink);
     }
     for (const m of [this.puddle, this.puddleInk, this.puddleHi]) m.rotation.x = -Math.PI / 2;
-    this.puddleInk.position.y = 0.003;
-    this.puddle.position.y = 0.004;
-    this.puddleHi.position.y = 0.005;
+    this.puddleInk.position.y = -BASE + 0.003;
+    this.puddle.position.y = -BASE + 0.004;
+    this.puddleHi.position.y = -BASE + 0.005;
+    for (const m of this.riversHi) m.visible = false;
+    this.wave.rotation.x = -Math.PI / 2;
+    this.wave.visible = false;
+    this.surfHi.rotation.x = -Math.PI / 2;
+    this.surfHi.visible = false;
+    // Viñeta: plano de 2×2 delante de una cámara ortográfica, con una textura radial.
+    this.vignetteMat = basic('#000', { map: vignetteTexture(), transparent: true, depthTest: false, depthWrite: false });
+    this.vignetteScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.vignetteMat));
+    this.renderer.autoClear = false;
 
     this.limitRing.rotation.x = Math.PI / 2;
     this.frost.visible = false;
@@ -504,14 +570,16 @@ export class Escena3D {
     this.blurScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.blurMat));
     // El cristal y sus brillos, después de lo opaco; la tinta del aro, antes que el aro.
     this.glass.renderOrder = 2;
-    for (const g of this.glassHi) g.renderOrder = 3;
+    for (const g of [...this.glassHi, ...this.wallBands, this.baseHi]) g.renderOrder = 3;
+    this.base.renderOrder = 2;
     this.rimInk.renderOrder = 4;
     this.rim.renderOrder = 5;
 
     scene.add(this.liquidBody, this.liquidGloss, this.foamBody, this.surface, this.contact, this.domeLine,
       ...this.foamDots, this.bubbles, this.drops, this.dropsInk, this.dropsHi, this.stream, this.streamInk,
       this.streamHi, this.bits, this.bitsInk, ...this.ripples, ...this.rivers, ...this.riversInk,
-      this.puddleInk, this.puddle, this.puddleHi, this.glass, ...this.glassHi, this.glassLine,
+      this.puddleInk, this.puddle, this.puddleHi, ...this.riversHi, this.wave, this.surfHi, this.base, this.baseHi,
+      ...this.wallBands, this.glass, ...this.glassHi, this.glassLine,
       this.rimInk, this.rim, this.limitRing, this.hole, this.leakStream, this.frost);
     this.setTema('noche');
   }
@@ -553,17 +621,18 @@ export class Escena3D {
     const hubGeo = new THREE.SphereGeometry(10 * PX, 16, 12);
     const hub = new THREE.Mesh(hubGeo, this.metal);
     const hubInk = new THREE.Mesh(hubGeo, this.ink.faucet);
-    const barGeo = new THREE.CapsuleGeometry(6 * PX, 28 * PX, 4, 12);
+    // Palanca acortada (v0.16.0, UB-02): con 28 px y el pomo a 42, a tope (65°) se salía por arriba.
+    const barGeo = new THREE.CapsuleGeometry(6 * PX, 20 * PX, 4, 12);
     barGeo.rotateZ(Math.PI / 2);
-    barGeo.translate(20 * PX, 0, 0);
+    barGeo.translate(16 * PX, 0, 0);
     const bar = new THREE.Mesh(barGeo, this.metal);
     const barInk = new THREE.Mesh(barGeo, this.ink.faucet);
     const knobGeo = new THREE.SphereGeometry(11 * PX, 16, 12);
-    knobGeo.translate(42 * PX, 0, 0);
+    knobGeo.translate(34 * PX, 0, 0);
     const knob = new THREE.Mesh(knobGeo, this.knob);
     const knobInk = new THREE.Mesh(knobGeo, this.ink.faucet);
     const knobHi = new THREE.Mesh(new THREE.SphereGeometry(3.5 * PX, 8, 6), basic('#fff', { transparent: true, opacity: 0.6 }));
-    knobHi.position.set(39 * PX, 3 * PX, 9 * PX);
+    knobHi.position.set(31 * PX, 3 * PX, 9 * PX);
     this.lever.position.set(px, py, 0);
     this.lever.add(bar, barInk, knob, knobInk, knobHi, hub, hubInk);
 
@@ -592,6 +661,13 @@ export class Escena3D {
     this.rimInkMat.color.set(c.tinta);
     this.glassMat.color.set(c.cristal);
     this.glassMat.opacity = c.cristalOpacidad;
+    for (const m of this.wallBandMats) m.color.set(c.cristal);
+    this.baseMat.color.set(c.cristal);
+    this.baseMat.opacity = Math.min(1, c.cristalOpacidad * 2.2);
+    this.baseHiMat.color.set(c.aro);
+    this.holeMat.color.set(c.tinta);
+    this.vignetteMat.color.set(c.vineta);
+    this.vignetteMat.opacity = c.vinetaOpacidad;
     this.frostMat.uniforms.uCristal.value.set(c.cristal);
     this.rimMat.color.set(c.aro);
     this.tableTop.color.set(c.tablero);
@@ -664,11 +740,21 @@ export class Escena3D {
     ctx.fillStyle = c.pared;
     ctx.fillRect(x0, cy - visH / 2, visW, visH);
     ctx.fillStyle = c.luz;
-    ctx.globalAlpha = 0.25;
-    for (const r of [0.62, 0.33]) {
-      ctx.beginPath();
-      ctx.arc(fx(this.temaId === 'noche' ? 0.18 : 0.2), top + (this.temaId === 'noche' ? 0.05 : -0.2), r * seenW, 0, Math.PI * 2);
-      ctx.fill();
+    if (this.temaId === 'noche') {
+      // Halo de la lámpara detrás del vaso, a media altura (v0.16.0; antes, arriba a la izquierda).
+      for (const [r, o] of [[0.6, 0.16], [0.36, 0.18]]) {
+        ctx.globalAlpha = o;
+        ctx.beginPath();
+        ctx.arc(0, H / 2, r * seenW, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else {
+      ctx.globalAlpha = 0.25;
+      for (const r of [0.62, 0.33]) {
+        ctx.beginPath();
+        ctx.arc(fx(0.2), top - 0.2, r * seenW, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     ctx.globalAlpha = 1;
     ctx.lineWidth = 0.025;
@@ -688,8 +774,9 @@ export class Escena3D {
       ctx.fillStyle = c.decoClaro;
       ctx.fillRect(x0, shelfY - 0.1, fx(0.25) - x0, 0.1);
       ctx.fillRect(fx(0.75), shelfY - 0.1, -x0 - fx(0.75), 0.1);
-      ctx.fillStyle = c.deco;
+      let nb = 0;
       const bottle = (f: number, w: number, h: number) => {
+        ctx.fillStyle = c.botellas[nb++ % c.botellas.length];
         const x = fx(f), b = shelfY;
         ctx.beginPath();
         ctx.moveTo(x, b);
@@ -734,25 +821,43 @@ export class Escena3D {
   private setVessel(v: Vessel) {
     this.vessel = v;
     GH = H * v.height;
-    const pts = [new THREE.Vector2(0, -0.02), ...profile(v, 0, 1, GLASS)];
-    pts[1].y = -0.02;
+    // El cristal baja hasta −BASE: debajo del líquido, el culo grueso.
+    const r0 = R * v.radius(0) * GLASS;
+    const pts = [new THREE.Vector2(0, -BASE), new THREE.Vector2(r0, -BASE), ...profile(v, 0, 1, GLASS)];
     this.glass.geometry.dispose();
     this.glass.geometry = new THREE.LatheGeometry(pts, SEGMENTS);
-    // Brillos del cristal: franja ancha a la izquierda y otra fina a la derecha.
-    this.glassHi[0].geometry.dispose();
-    this.glassHi[0].geometry = band(v, 0.1, 0.9, -0.78, -0.62, GLASS + 0.004);
-    this.glassHi[1].geometry.dispose();
-    this.glassHi[1].geometry = band(v, 0.28, 0.8, 0.66, 0.73, GLASS + 0.004);
+    this.base.geometry.dispose();
+    this.base.geometry = new THREE.LatheGeometry([new THREE.Vector2(0, -BASE), new THREE.Vector2(r0, -BASE), new THREE.Vector2(r0, 0), new THREE.Vector2(0, 0)], SEGMENTS);
+    // El brillo curvo del culo: un arco de ≈120° por delante, a media altura.
+    const arco: THREE.Vector3[] = [];
+    for (let i = 0; i <= 16; i++) {
+      const a = THREE.MathUtils.degToRad(-60 + 120 * i / 16);
+      arco.push(new THREE.Vector3(Math.sin(a) * (r0 + 0.004), -BASE / 2, Math.cos(a) * (r0 + 0.004)));
+    }
+    this.baseHi.geometry.dispose();
+    this.baseHi.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(arco), 32, 1.5 * PX, 6, false);
+    // Brillos del cristal: franja ancha y otra fina a la izquierda, y una fina a la derecha.
+    const hi: [number, number, number, number][] = [[0.1, 0.9, -0.78, -0.62], [0.28, 0.8, 0.66, 0.73], [0.12, 0.82, -0.58, -0.54]];
+    hi.forEach(([h0, h1, s0, s1], i) => {
+      this.glassHi[i].geometry.dispose();
+      this.glassHi[i].geometry = band(v, h0, h1, s0, s1, GLASS + 0.004);
+    });
+    // La pared: dos franjas de toda la altura en los laterales.
+    ([[-0.99, -0.93], [0.93, 0.99]] as const).forEach(([s0, s1], i) => {
+      this.wallBands[i].geometry.dispose();
+      this.wallBands[i].geometry = band(v, 0, 1, s0, s1, GLASS + 0.004);
+    });
 
     // Contorno del cristal: la silueta (lados y el arco delantero del fondo) como un tubo.
     const sil: THREE.Vector3[] = [];
     const rr = (h: number) => R * v.radius(h) * GLASS;
     for (let i = 40; i >= 0; i--) sil.push(new THREE.Vector3(-rr(i / 40), GH * i / 40, 0));
-    const r0 = rr(0);
+    sil.push(new THREE.Vector3(-r0, -BASE, 0));
     for (let i = 1; i < 24; i++) {
       const a = Math.PI * (1 - i / 24);
-      sil.push(new THREE.Vector3(Math.cos(a) * r0, -0.02, Math.sin(a) * r0));
+      sil.push(new THREE.Vector3(Math.cos(a) * r0, -BASE, Math.sin(a) * r0));
     }
+    sil.push(new THREE.Vector3(r0, -BASE, 0));
     for (let i = 0; i <= 40; i++) sil.push(new THREE.Vector3(rr(i / 40), GH * i / 40, 0));
     this.glassLine.geometry.dispose();
     this.glassLine.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(sil, false, 'centripetal'), 220, 1.75 * PX, 6, false);
@@ -768,11 +873,14 @@ export class Escena3D {
       m.position.y = GH;
     }
 
-    // Esmerilado: la funda de escarcha, torneada con el perfil del cristal, y los brillos más suaves.
-    this.glassHiMat.opacity = v.frosted ? 0.3 : 0.55;
+    // Esmerilado: la funda de escarcha, torneada con el perfil del cristal (también el culo), y los
+    // brillos más suaves (los tres en la misma proporción que el 0,55 → 0,3 de la maqueta).
+    [0.6, 0.55, 0.4].forEach((o, i) => { this.glassHiMats[i].opacity = o * (v.frosted ? 0.3 / 0.55 : 1); });
     if (v.frosted) {
+      const funda = profile(v, 0, 1, GLASS + 0.002);
+      funda.unshift(new THREE.Vector2(funda[0].x, -BASE));
       this.frost.geometry.dispose();
-      this.frost.geometry = new THREE.LatheGeometry(profile(v, 0, 1, GLASS + 0.002), SEGMENTS);
+      this.frost.geometry = new THREE.LatheGeometry(funda, SEGMENTS);
       this.frostMat.uniforms.uGH.value = GH;
       this.frostMat.uniforms.uRad.value = R * v.radius(0.5) * (GLASS + 0.002);
     }
@@ -786,7 +894,7 @@ export class Escena3D {
       const p = n.clone().multiplyScalar(R * v.radius(h) * GLASS + 0.004).setY(GH * h);
       this.hole.position.copy(p);
       this.hole.lookAt(p.clone().add(n));
-      const fin = p.clone().add(n.clone().multiplyScalar(0.5)).setY(-0.02);
+      const fin = p.clone().add(n.clone().multiplyScalar(0.5)).setY(-BASE);
       const curva = new THREE.QuadraticBezierCurve3(p, p.clone().add(n.clone().multiplyScalar(0.3)), fin);
       this.leakStream.geometry.dispose();
       this.leakStream.geometry = new THREE.TubeGeometry(curva, 20, 2.4 * PX, 6, false);
@@ -856,6 +964,7 @@ export class Escena3D {
     setToon(this.liquidMat, l.cuerpo, l.sombra);
     setToon(this.foamMat, l.espuma ?? l.superficie, l.espumaSombra ?? l.superficie);
     this.lineMat.color.set(l.linea);
+    this.surfHiMat.color.set(l.linea);
     this.glossMat.color.set(l.reflejo);
     this.puddleMat.color.set(l.cuerpo);
     this.leakMat.color.set(l.cuerpo);
@@ -871,7 +980,7 @@ export class Escena3D {
       mesh.visible = false;
       return;
     }
-    const pts = profile(this.vessel!, h0, h1, 0.985, Math.max(2, Math.ceil((h1 - h0) * 40)));
+    const pts = profile(this.vessel!, h0, h1, LIQ_R, Math.max(2, Math.ceil((h1 - h0) * 40)));
     if (closeBottom) pts.unshift(new THREE.Vector2(0, GH * h0));
     mesh.geometry = new THREE.LatheGeometry(pts, SEGMENTS);
     mesh.visible = true;
@@ -932,7 +1041,7 @@ export class Escena3D {
       this.liquidGloss.geometry.dispose();
       const g0 = Math.min(0.03, liquidTop);
       this.liquidGloss.visible = liquidTop - g0 > 0.04;
-      if (this.liquidGloss.visible) this.liquidGloss.geometry = band(v, g0, liquidTop - 0.01, -0.7, -0.56, 0.99);
+      if (this.liquidGloss.visible) this.liquidGloss.geometry = band(v, g0, liquidTop - 0.01, -0.7, -0.56, LIQ_R + 0.005);
     }
     if (Math.abs(capped - this.lastFoamTop) > 0.001) {
       this.lastFoamTop = capped;
@@ -944,7 +1053,7 @@ export class Escena3D {
     const surf = this.surface;
     surf.visible = glass.total > 0.0005;
     this.surfaceMat.color.set(glass.foam > 0.002 || !l.espuma ? l.superficie : l.reflejo);
-    const rTop = R * v.radius(capped) * 0.985;
+    const rTop = R * v.radius(capped) * LIQ_R;
     surf.scale.set(rTop, 1, rTop);
     surf.position.y = GH * capped;
     const amp = (0.003 + Math.min(0.02, faucet.flow * 0.18)) * (dome > 0 ? 0.3 : 1);
@@ -999,12 +1108,22 @@ export class Escena3D {
       d.position.set(x, ySurf + dome * (1 - rho * rho) + 0.006, z);
       d.scale.setScalar(r * PX * 1.3);
     });
+    // Brillo elíptico en la superficie (v0.16.0), arriba a la izquierda y algo hacia la cámara;
+    // sigue la cúpula como las pompas. No con espuma a la vista.
+    this.surfHi.visible = surf.visible && !foamy && !hasFoam;
+    if (this.surfHi.visible) {
+      const x = -0.35 * rTop, z = 0.2 * rTop;
+      const rho = Math.hypot(x, z) / rTop;
+      this.surfHi.position.set(x, ySurf + dome * (1 - rho * rho) + 0.007, z);
+      this.surfHi.scale.set(0.27 * rTop, 0.05 * rTop, 1);
+    }
+
     let nb = 0;
     if (l.burbujas && liquidTop > 0.06) {
       for (let i = 0; i < N_BUBBLES; i++) {
         const h = ((i * 0.618 + now * (0.05 + (i % 3) * 0.02)) % 1) * (liquidTop - 0.04) + 0.01;
         const s = ((i * 0.37) % 1) * 1.2 - 0.6;
-        const rr = R * v.radius(h) * 0.99;
+        const rr = R * v.radius(h) * LIQ_R;
         const a = phi(s);
         this.setInstance(this.bubbles, nb++, Math.sin(a) * rr, GH * h, Math.cos(a) * rr, (1.6 + (i % 3) * 0.5) * PX);
       }
@@ -1060,6 +1179,19 @@ export class Escena3D {
       this.setInstance(this.bitsInk, nbits, x, y, 0.05, r);
       nbits++;
     };
+    // Corona del desborde (v0.16.0): una vez, al empezar; cuelga de overflowSince, como todo el
+    // desborde, para que salga igual en la cámara lenta.
+    const td = glass.overflowed && this.overflowSince !== null ? now - this.overflowSince : -1;
+    if (td >= 0 && td < CORONA_S) {
+      const rimR = R * v.radius(1) * GLASS;
+      for (const c of CORONA) {
+        const y = GH + c.vy * td - 2.5 * td * td;
+        const rr = rimR + c.vh * td;
+        this.setInstance(this.bits, nbits, Math.sin(c.a) * rr, y, Math.cos(c.a) * rr, c.r * PX);
+        this.setInstance(this.bitsInk, nbits, Math.sin(c.a) * rr, y, Math.cos(c.a) * rr, c.r * PX);
+        nbits++;
+      }
+    }
     this.splashes = this.splashes.filter(s => now - s.t0 < 0.5);
     for (const s of this.splashes) {
       const t = (now - s.t0) / 0.5;
@@ -1107,15 +1239,28 @@ export class Escena3D {
         const L = Math.max(0.02, len * k);
         for (let j = 0; j <= 24; j++) {
           const h = 1 - L * j / 24;
-          const rr = R * v.radius(h) * GLASS + 0.02;
+          const rr = R * v.radius(Math.max(0, h)) * GLASS + 0.02;
           const wig = 0.012 * Math.sin(h * 11 + ph);
-          pts.push(new THREE.Vector3(Math.sin(a) * rr + Math.cos(a) * wig, GH * h + 0.01, Math.cos(a) * rr - Math.sin(a) * wig));
+          // Del borde (h = 1) a la mesa, que está a −BASE (h = 0).
+          const y = (GH + BASE) * h - BASE + 0.01;
+          pts.push(new THREE.Vector3(Math.sin(a) * rr + Math.cos(a) * wig, y, Math.cos(a) * rr - Math.sin(a) * wig));
         }
-        const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 3.2 * PX, 8, false);
+        const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 4.5 * PX, 8, false);
         this.rivers[i].geometry.dispose();
         this.rivers[i].geometry = geo;
         this.riversInk[i].geometry = geo;
         this.rivers[i].visible = this.riversInk[i].visible = true;
+        // El lateral izquierdo y el de delante a la izquierda: un brillo fino hacia la luz en su
+        // primer tercio.
+        const hiI = i === 0 ? 0 : i === 3 ? 1 : -1;
+        if (hiI >= 0) {
+          const luz = new THREE.Vector3(-Math.cos(a), 0, Math.sin(a)).multiplyScalar(-1.6 * PX).add(new THREE.Vector3(0, 0, 2.2 * PX));
+          const tramo = pts.slice(0, 9).map(p => p.clone().add(luz));
+          const m = this.riversHi[hiI];
+          m.geometry.dispose();
+          m.geometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(tramo), 16, 1.2 * PX, 6, false);
+          m.visible = true;
+        }
       });
       const rimR = R * v.radius(1) * GLASS;
       for (const [x0, vx, o] of [[-rimR, -0.5, 0], [rimR, 0.55, 0.4], [rimR * 0.5, 0.25, 0.7]]) {
@@ -1123,7 +1268,17 @@ export class Escena3D {
         bit(x0 + vx * tt, GH + 1.1 * tt - 5 * tt * tt + 0.03, 3.2 * PX);
       }
       this.bits.count = this.bitsInk.count = nbits;
-      const pr = R * v.radius(0) + 0.15 + 0.4 * k;
+      // Onda que se abre en el borde, una vez.
+      const kw = td / ONDA_S;
+      this.wave.visible = kw >= 0 && kw < 1;
+      if (this.wave.visible) {
+        this.wave.geometry.dispose();
+        this.wave.geometry = ringGeometry(rimR * (1 + ONDA_CRECE * kw), 2.4 * PX);
+        this.wave.position.y = GH + 0.006;
+        this.waveMat.color.set(l.linea);
+        this.waveMat.opacity = 0.55 * (1 - kw);
+      }
+      const pr = R * v.radius(0) + 0.15 + 0.55 * k;
       if (this.puddle.userData.r !== pr) {
         this.puddle.userData.r = pr;
         const shape = new THREE.Shape();
@@ -1141,11 +1296,13 @@ export class Escena3D {
         this.puddleHi.geometry.dispose();
         const hi = new THREE.Shape();
         hi.ellipse(-pr * 0.55, -0.32 * pr, pr * 0.2, pr * 0.05, 0, Math.PI * 2, false, 0);
-        this.puddleHi.geometry = new THREE.ShapeGeometry(hi);
+        const hi2 = new THREE.Shape();
+        hi2.ellipse(pr * 0.5, -0.4 * pr, pr * 0.08, pr * 0.03, 0, Math.PI * 2, false, 0);
+        this.puddleHi.geometry = new THREE.ShapeGeometry([hi, hi2]);
       }
       this.puddle.visible = this.puddleInk.visible = this.puddleHi.visible = true;
     } else {
-      for (const m of [...this.rivers, ...this.riversInk]) m.visible = false;
+      for (const m of [...this.rivers, ...this.riversInk, ...this.riversHi, this.wave]) m.visible = false;
       this.puddle.visible = this.puddleInk.visible = this.puddleHi.visible = false;
       this.puddle.userData.r = -1;
     }
@@ -1166,7 +1323,10 @@ export class Escena3D {
       this.blurPass();
       this.frost.visible = true;
     }
+    // autoClear va apagado por la viñeta: limpiar, la escena y la viñeta encima (v0.16.0).
+    this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
+    this.renderer.render(this.vignetteScene, this.blurCam);
   }
 
   /** Desenfoca lo que hay detrás del cristal: la escena a 1/4 (o 1/8) y gaussianos separables. */
@@ -1184,6 +1344,7 @@ export class Escena3D {
     for (const rt of this.blurRT) if (rt.width !== w || rt.height !== h) rt.setSize(w, h);
     const [escena, ida, vuelta] = this.blurRT;
     r.setRenderTarget(escena);
+    r.clear();
     r.render(this.scene, this.camera);
     let src = escena;
     if (sigma > 0.3) {

@@ -81,7 +81,7 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
   background: var(--panel); border: 2px solid var(--panel-borde); border-radius: 16px;
 }
 .campo input {
-  flex: 1; min-width: 0; height: 100%; font: 500 17px 'Fredoka', system-ui, sans-serif;
+  flex: 1; min-width: 0; height: 100%; font: 500 17px 'Fredoka Variable', system-ui, sans-serif;
   background: transparent; border: 0; outline: none; color: var(--texto);
 }
 .campo input::placeholder { color: var(--suave); opacity: .8; }

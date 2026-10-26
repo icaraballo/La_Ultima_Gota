@@ -30,6 +30,11 @@ export interface ColoresEscena {
   metalBrillo: string;
   pomo: string;
   sombra: string;
+  /** Botellas del estante (solo se pintan en noche). */
+  botellas: string[];
+  /** Viñeta de las esquinas. */
+  vineta: string;
+  vinetaOpacidad: number;
 }
 
 export interface ColoresUi {
@@ -58,6 +63,7 @@ export const TEMAS: Record<TemaId, Tema> = {
       tablero: '#8B4E2B', tableroLinea: '#75401F', liston: '#B0703F', canto: '#5E3119', debajo: '#160C09',
       tinta: '#140B08', cristal: '#FFF6E8', cristalOpacidad: 0.13, aro: '#FFF4E2',
       metal: '#C99A4B', metalBrillo: '#F6D891', pomo: '#E0533A', sombra: '#000000',
+      botellas: ['#3F5A3C', '#6B3427', '#7A5C2A'], vineta: '#000000', vinetaOpacidad: 0.45,
     },
     ui: {
       fondo: '#2B1B17', panel: '#3A2620', panelBorde: '#4E3329', texto: '#FCEBD3', suave: '#D9BFA3',
@@ -71,6 +77,8 @@ export const TEMAS: Record<TemaId, Tema> = {
       tablero: '#EBCB9C', tableroLinea: '#DDB580', liston: '#F7E2C0', canto: '#C08F5C', debajo: '#8C6644',
       tinta: '#24303D', cristal: '#FFFFFF', cristalOpacidad: 0.4, aro: '#FFFFFF',
       metal: '#B7C2CC', metalBrillo: '#F4F8FB', pomo: '#C2482F', sombra: '#5A4630',
+      // Las botellas no se pintan de día (la cocina no tiene estante); van por si cambia.
+      botellas: ['#3F5A3C', '#6B3427', '#7A5C2A'], vineta: '#5A4630', vinetaOpacidad: 0.18,
     },
     ui: {
       fondo: '#F4EEE2', panel: '#FFFFFF', panelBorde: '#E3D8C4', texto: '#24303D', suave: '#5F6B78',

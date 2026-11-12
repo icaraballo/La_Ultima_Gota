@@ -1,21 +1,18 @@
-MIT License
+La Última Gota
+Copyright © 2026 Iñigo Caraballo. Todos los derechos reservados.
 
-Copyright (c) 2026 Iñigo Caraballo
+El código de este repositorio se publica para que se pueda leer y para servir el juego en
+https://icaraballo.github.io/La_Ultima_Gota/. Esta publicación no concede ningún permiso para
+copiarlo, modificarlo, distribuirlo, publicarlo en otro sitio ni usarlo, en todo o en parte,
+para ningún otro fin, sin permiso escrito del autor.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Hasta la versión 0.17.2 el código se publicó con la licencia MIT; lo publicado hasta entonces
+conserva esa licencia. Desde la versión 0.17.3, esta.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Las bibliotecas que usa el juego (Three.js y Matter.js, MIT) y la letra Fredoka (SIL Open Font
+License 1.1) no están cubiertas por esta licencia: son de sus autores, y sus licencias completas
+se publican con el juego en licencias.txt.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+SIN GARANTÍA. El juego y el código se ofrecen «tal cual», sin garantía de ningún tipo, expresa
+o implícita, incluidas las de funcionamiento, idoneidad para un fin concreto o ausencia de
+errores. El autor no responde de ningún daño ni pérdida derivados de su uso.

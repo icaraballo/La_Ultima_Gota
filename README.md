@@ -67,7 +67,8 @@ Ver [SECURITY.md](SECURITY.md).
 
 ## Licencia
 
-Código bajo [MIT](LICENSE). Incluye [Three.js](https://threejs.org) y
+Todos los derechos reservados: ver [LICENSE](LICENSE). Hasta la v0.17.2 el código se publicó con
+MIT; lo publicado entonces conserva esa licencia. Incluye [Three.js](https://threejs.org) y
 [Matter.js](https://brm.io/matter-js/) (MIT) y la letra Fredoka (SIL Open Font License
 1.1). Las licencias completas se publican con el juego en
 [licencias.txt](https://icaraballo.github.io/La_Ultima_Gota/licencias.txt).

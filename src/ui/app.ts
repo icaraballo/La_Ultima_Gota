@@ -126,7 +126,7 @@ export function startApp(root: HTMLElement) {
       </section>
     </div>
     <div class="hoja-fondo" id="hoja" hidden></div>
-    <div class="version">${t.version(__VERSION__)}</div>
+    <div class="version">${t.version(__VERSION__)}<span class="fuera-de-juego"> · <button class="enlace-priv" id="abrir-privacidad">${t.privacidad}</button></span></div>
   `;
   const $ = (id: string) => document.getElementById(id)!;
   const pJugadores = $('p-jugadores'), pJuego = $('p-juego'), pIntro = $('p-intro'), capa = $('j-capa');
@@ -145,6 +145,7 @@ export function startApp(root: HTMLElement) {
   vista.setTema(tema);
   const debug = createDebug(root, vista);
   const opinion = createOpinion(root);
+  $('abrir-privacidad').addEventListener('click', () => opinion.abrirPrivacidad());
 
   // Lo que acompaña a una opinión (los campos que no se ven del formulario): la partida en curso
   // o, en la pantalla de jugadores, la que está preparada. No se traduce: es para Iñigo.
@@ -355,15 +356,6 @@ export function startApp(root: HTMLElement) {
             <p>${t.sobreQue}</p>
             <p>${t.sobreGuarda}</p>
             <p>${t.sobreCreditos}</p>
-            <p class="sobre-version">${t.version(__VERSION__)}</p>
-            <div class="sobre-botones">
-              <button class="boton" id="sobre-privacidad">${t.privacidad}</button>
-              ${botonOpinar('sobre-opinar')}
-            </div>
-            <p class="sobre-enlaces">
-              <a href="https://github.com/icaraballo/La_Ultima_Gota" target="_blank" rel="noopener noreferrer">${t.sobreCodigo}</a> ·
-              <a href="https://icaraballo.github.io/La_Ultima_Gota/licencias.txt" target="_blank" rel="noopener noreferrer">${t.sobreLicencias}</a>
-            </p>
           </div>
         </div>
       </section>`;
@@ -445,7 +437,6 @@ export function startApp(root: HTMLElement) {
     if (history.state?.hoja) history.back();
     else hoja.hidden = true;
   }
-  // Opinar y Privacidad se abren encima de Ajustes: al cerrarlas, Ajustes sigue ahí.
   window.addEventListener('popstate', () => { hoja.hidden = history.state?.hoja !== true; });
   hoja.addEventListener('click', e => {
     const el = e.target as HTMLElement;
@@ -454,8 +445,6 @@ export function startApp(root: HTMLElement) {
       if (marcado?.id === opcion.dataset.valor) confirmarEleccion();
       else marcar(opcion.dataset.valor!);
     } else if (el.closest('#confirmar-eleccion')) confirmarEleccion();
-    else if (el.closest('#sobre-privacidad')) opinion.abrirPrivacidad();
-    else if (el.closest('#sobre-opinar')) opinion.abrir(datosOpinion());
     else if (el === hoja || el.closest('#cerrar-info')) cerrarInfo();
   });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarInfo(); });

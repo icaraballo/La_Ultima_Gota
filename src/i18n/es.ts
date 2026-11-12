@@ -142,14 +142,12 @@ export const es = {
   graciasTexto: 'Lo leo todo. Tu opinión ayuda a que el juego mejore.',
   volverAlJuego: 'Volver al juego',
   privacidad: 'Privacidad',
-  // «Sobre este juego», dentro de Ajustes (v0.17.2). Lo de guardar y enviar repite la privacidad: si
+  // «Sobre este juego», dentro de Ajustes (v0.17.2), con los mismos apartados que en los otros juegos. Lo de guardar y enviar repite la privacidad: si
   // cambia una, cambiar la otra.
   sobreTitulo: 'Sobre este juego',
-  sobreQue: 'Un juego para jugar entre varios con un solo móvil: entre todos llenáis un vaso y quien lo desborda, pierde.',
-  sobreGuarda: 'Guarda en este móvil los nombres y las opciones de la última partida, el tema y los ajustes. No hay cuentas, servidor ni analítica.',
-  sobreCreditos: 'Hecho por Iñigo Caraballo. Código bajo licencia MIT, con Three.js y Matter.js (MIT) y la letra Fredoka (SIL OFL 1.1).',
-  sobreCodigo: 'Código en GitHub',
-  sobreLicencias: 'Licencias',
+  sobreQue: '<b>Qué es.</b> Un juego para jugar entre varios con un solo móvil: entre todos llenáis un vaso y quien lo desborda, pierde.',
+  sobreGuarda: '<b>Tu partida.</b> Los nombres y las opciones de la última partida, el tema y los ajustes se guardan solo en este móvil. No hay cuentas, servidor ni analítica.',
+  sobreCreditos: '© 2026 Iñigo Caraballo · Todos los derechos reservados',
   entendido: 'Entendido',
   si: 'Sí',
   no: 'No',

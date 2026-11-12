@@ -1,0 +1,13 @@
+{
+  "appId": "icaraballo.laultimagota",
+  "appName": "La Última Gota",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#2B1B17"
+  },
+  "plugins": {
+    "SystemBars": {
+      "style": "DARK"
+    }
+  }
+}

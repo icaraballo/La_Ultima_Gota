@@ -46,11 +46,23 @@ if (!/<meta property="og:image" content="https:\/\/[^"]+"/.test(html)) falla('in
 if (!/<noscript>/.test(html)) falla('index.html no lleva <noscript>');
 
 // 4. Imágenes de la vista previa y los iconos.
-for (const f of ['og.png', 'favicon.svg', 'apple-touch-icon.png']) {
+for (const f of ['og.png', 'favicon.svg', 'apple-touch-icon.png', 'privacidad.html']) {
   if (!existsSync(join(dist, f))) falla(`falta dist/${f}`);
 }
 const og = join(dist, 'og.png');
 if (existsSync(og) && statSync(og).size >= 1024 * 1024) falla('og.png pesa 1 MB o más');
+
+// 4b. La política de privacidad (Google Play pide un enlace público): suelta, sin peticiones a nadie
+// y con lo mismo que dice el juego.
+const priv = join(dist, 'privacidad.html');
+if (existsSync(priv)) {
+  const p = texto(priv);
+  if (!/<meta http-equiv="Content-Security-Policy"/.test(p)) falla('privacidad.html no lleva la CSP');
+  if (/(src|href)="https?:\/\//.test(p.replace(/<a href="https:\/\/github\.com\/icaraballo\/La_Ultima_Gota">/, ''))) falla('privacidad.html pide algo a otra web');
+  for (const frase of ['no tiene servidor, ni cuentas, ni analítica', 'formulario de', 'dirección IP']) {
+    if (!p.replace(/<\/?b>|\s+/g, ' ').toLowerCase().includes(frase.toLowerCase())) falla(`privacidad.html no dice «${frase}»`);
+  }
+}
 
 // 5. La versión que se ve en la esquina es la de package.json.
 const js = todos.filter(r => r.endsWith('.js')).map(texto).join('\n');

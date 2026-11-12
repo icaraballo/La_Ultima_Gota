@@ -143,6 +143,13 @@ export const es = {
   volverAlJuego: 'Volver al juego',
   privacidad: 'Privacidad',
   entendido: 'Entendido',
+  si: 'Sí',
+  no: 'No',
+  // «Atrás» en la app de Android.
+  salirTitulo: '¿Salir de La Última Gota?',
+  salirTexto: 'Cuando quieras, vuelves.',
+  dejarPartida: '¿Dejar la partida?',
+  dejarPartidaTexto: 'Se pierde la partida en curso.',
   privacidadTexto: [
     'La Última Gota <b>no tiene servidor, ni cuentas, ni analítica, ni cookies</b>.',
     'Guarda en este navegador los nombres y las opciones de la última partida, el tema elegido y los ajustes. <b>Nada de eso sale de tu móvil</b>; si borras los datos del sitio, se borran.',

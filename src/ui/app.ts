@@ -12,13 +12,14 @@ import { Barra2D } from '../render/barra-2d';
 import { Escena3D } from '../render/escena-3d';
 import { Grabadora, REPETICION } from '../render/repeticion';
 import { aplicarTemas, guardarTema, LIQUIDOS, SOLIDOS, temaGuardado, type TemaId } from '../render/temas';
-import { puedeVibrar, Vibracion } from '../haptics/vibracion';
+import { puedeVibrar, vibra, Vibracion } from '../haptics/vibracion';
 import { sanearAjustes, type Ajustes } from './ajustes';
 import { createDebug } from './debug';
 import { esc } from './html';
 import { iconos } from './iconos';
 import { Demo, htmlIntro } from './intro';
 import { botonOpinar, createOpinion, type DatosOpinion } from './opinion';
+import { enApp, plugin, type PluginApp } from './nativo';
 import { mantenerVertical } from './orientacion';
 import { pedir as pedirPantalla, puedeMantener, soltar as soltarPantalla, volverAPedir } from './pantalla';
 import { MAX_NOMBRE, sanearPreparacion, TIEMPOS, type Preparacion } from './preparacion';
@@ -114,6 +115,16 @@ export function startApp(root: HTMLElement) {
       <div class="capa" id="j-capa" hidden></div>
     </section>
     <section class="pantalla intro" id="p-intro" hidden>${htmlIntro()}</section>
+    <div class="hoja-fondo salir-fondo" id="salir" hidden>
+      <section class="salir-caja" role="alertdialog" aria-modal="true" aria-labelledby="salir-titulo" aria-describedby="salir-texto">
+        <h2 id="salir-titulo"></h2>
+        <p id="salir-texto"></p>
+        <div class="salir-botones">
+          <button class="boton" id="salir-no">${t.no}</button>
+          <button class="boton principal" id="salir-si">${t.si}</button>
+        </div>
+      </section>
+    </div>
     <div class="hoja-fondo" id="hoja" hidden></div>
     <div class="version">${t.version(__VERSION__)}<span class="fuera-de-juego"> · <button class="enlace-priv" id="abrir-privacidad">${t.privacidad}</button></span></div>
   `;
@@ -188,7 +199,6 @@ export function startApp(root: HTMLElement) {
     pJugadores.hidden = true;
     pJuego.hidden = false;
     pIntro.hidden = false;
-    ($('intro-jugar') as HTMLButtonElement).focus({ preventScroll: true });
   }
   function salirDeLaIntro() {
     if (!demo) return;
@@ -358,7 +368,7 @@ export function startApp(root: HTMLElement) {
       const cerca = hoja.querySelector<HTMLInputElement>('[data-ajuste="cercania"]')!;
       cerca.disabled = !el.checked;
       cerca.closest('.interruptor')!.classList.toggle('apagado', !el.checked);
-      if (el.checked) navigator.vibrate?.(40); // para notar que vibra
+      if (el.checked && puedeVibrar()) vibra(40); // para notar que vibra
     }
   });
 
@@ -452,6 +462,49 @@ export function startApp(root: HTMLElement) {
     shownPhase = null;
     pJugadores.hidden = true;
     pJuego.hidden = false;
+  }
+
+  // ── «Atrás» del móvil (solo en la app de Android, como en La Colmena y Chromalchemy) ──
+  // Sube un escalón: cierra la hoja de encima; en una partida pregunta «¿Dejar la partida?» (se
+  // pierde); en la intro y en Jugadores pregunta «¿Salir?». Sin la pregunta, un gesto de atrás sin
+  // querer cerraría la app. En la web no hace falta: el navegador ya tiene su «atrás».
+  const salir = $('salir');
+  let salirPara: 'app' | 'partida' | null = null;
+  function abrirSalir(para: 'app' | 'partida') {
+    salirPara = para;
+    $('salir-titulo').textContent = para === 'app' ? t.salirTitulo : t.dejarPartida;
+    $('salir-texto').textContent = para === 'app' ? t.salirTexto : t.dejarPartidaTexto;
+    salir.hidden = false;
+    $('salir-no').focus({ preventScroll: true });
+    soltarSiPulsa();
+  }
+  function cerrarSalir() { salir.hidden = true; salirPara = null; }
+  salir.addEventListener('click', e => {
+    const el = e.target as HTMLElement;
+    if (el === salir || el.closest('#salir-no')) cerrarSalir();
+    else if (el.closest('#salir-si')) {
+      const para = salirPara;
+      cerrarSalir();
+      if (para === 'partida') showPlayers();
+      else try { plugin<PluginApp>('App')?.exitApp(); } catch { /* no hay plugin */ }
+    }
+  });
+  /** true si hizo algo. */
+  function atras(): boolean {
+    if (!salir.hidden) { cerrarSalir(); return true; }
+    // Las hojas (ⓘ, Ajustes, elegir, Opinar y Privacidad) meten una entrada en el historial al abrir.
+    if (history.state?.hoja) { history.back(); return true; }
+    if (game && !pJuego.hidden) {
+      if (game.phase === 'fin') showPlayers();
+      else abrirSalir('partida');
+      return true;
+    }
+    abrirSalir('app'); // intro o Jugadores
+    return true;
+  }
+  if (enApp()) {
+    try { plugin<PluginApp>('App')?.addListener('backButton', () => { if (!atras()) plugin<PluginApp>('App')?.exitApp(); }); }
+    catch { /* sin el plugin, «atrás» hace lo de siempre */ }
   }
 
   // ── Juego ──────────────────────────────────────────────────
@@ -629,6 +682,8 @@ export function startApp(root: HTMLElement) {
       acc += Math.min(0.25, (nowMs - last) / 1000);
       last = nowMs;
       if (game) {
+        // Con «¿Dejar la partida?» a la vista el juego espera (el tiempo por turno y la leche no corren).
+        if (!salir.hidden) acc = 0;
         while (acc >= DT) {
           game.step(DT);
           if (game.phase === 'echando' || game.phase === 'desborde') grabadora.grabar(game);

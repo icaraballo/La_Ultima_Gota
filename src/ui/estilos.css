@@ -391,3 +391,16 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
 /* Arriba más pegado que los 64 px de la maqueta: la cámara del juego pone la llave del grifo a
    ~145 px de arriba y a 64 el lema chocaba con ella. La versión, clara sobre la mesa. */
 .en-intro .version { color: #fff; opacity: .9; text-shadow: 0 1px 3px rgba(0, 0, 0, .6); }
+
+/* ── «¿Salir?» (v0.17.0, «atrás» en la app de Android) ── */
+.salir-fondo { z-index: 7; display: grid; place-items: center; padding: 24px; }
+.salir-caja {
+  width: 100%; max-width: 320px; padding: 22px 20px 20px; text-align: center;
+  background: var(--panel); color: var(--texto);
+  border: 3px solid var(--tinta); border-radius: 24px; box-shadow: 0 6px 0 var(--tinta);
+}
+.salir-caja h2 { font-size: 22px; line-height: 1.15; }
+.salir-caja p { margin-top: 8px; color: var(--suave); font-size: 16px; }
+.salir-botones { display: flex; gap: 12px; margin-top: 20px; }
+.salir-botones .boton { flex: 1; min-height: 52px; }
+.salir-botones .boton.principal { font-size: 18px; min-height: 52px; margin-bottom: 5px; }

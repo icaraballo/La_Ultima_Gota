@@ -14,3 +14,8 @@ coverage/
 *.jks
 *.p12
 *.pem
+
+# App de Android (app-android/): la copia de la web y lo que se genera al fabricar
+app-android/www/
+*.aab
+*.apk

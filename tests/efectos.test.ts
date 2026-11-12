@@ -90,6 +90,11 @@ describe('sanearAjustes() (v0.14.0)', () => {
     expect(sanearAjustes(raw)).toEqual(AJUSTES_DE_SERIE);
   });
   it('solo valen true y false', () => {
-    expect(sanearAjustes({ sonido: false, vibracion: 'no', cercania: 0 })).toEqual({ sonido: false, vibracion: true, cercania: true });
+    expect(sanearAjustes({ sonido: false, vibracion: 'no', cercania: 0 })).toEqual({ sonido: false, vibracion: true, cercania: true, pantalla: true });
+  });
+  it('lo guardado sin el campo «pantalla» (antes de la v0.17.0) lo pone encendido', () => {
+    expect(sanearAjustes({ sonido: false, vibracion: false, cercania: false })).toEqual({ sonido: false, vibracion: false, cercania: false, pantalla: true });
+    expect(AJUSTES_DE_SERIE.pantalla).toBe(true);
+    expect(sanearAjustes({ pantalla: false }).pantalla).toBe(false);
   });
 });

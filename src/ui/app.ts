@@ -17,11 +17,13 @@ import { sanearAjustes, type Ajustes } from './ajustes';
 import { createDebug } from './debug';
 import { esc } from './html';
 import { iconos } from './iconos';
+import { Demo, htmlIntro } from './intro';
 import { botonOpinar, createOpinion, type DatosOpinion } from './opinion';
 import { mantenerVertical } from './orientacion';
+import { pedir as pedirPantalla, puedeMantener, soltar as soltarPantalla, volverAPedir } from './pantalla';
 import { MAX_NOMBRE, sanearPreparacion, TIEMPOS, type Preparacion } from './preparacion';
 
-// Pantallas: jugadores (con vaso y líquido, opciones y la hoja ⓘ), «Turno de X», el vaso,
+// Pantallas: intro (al abrir), jugadores (con vaso y líquido, opciones y la hoja ⓘ), «Turno de X», el vaso,
 // eliminado y el final (ganador, resumen y revancha), y la hoja de Ajustes (sonido y vibración).
 // Sin «Cómo jugar» (decisión del 23-10-2026).
 
@@ -88,6 +90,9 @@ export function startApp(root: HTMLElement) {
     vibracion.cercania = ajustes.cercania;
     if (!ajustes.sonido) sonido.callar();
     if (!ajustes.vibracion) vibracion.parar();
+    // Pantalla encendida: al cambiar el ajuste a media partida, se aplica al momento.
+    if (!ajustes.pantalla) void soltarPantalla();
+    else if (game) void pedirPantalla();
   }
   aplicarAjustes();
   // El navegador no deja sonar hasta el primer toque.
@@ -108,11 +113,12 @@ export function startApp(root: HTMLElement) {
       </footer>
       <div class="capa" id="j-capa" hidden></div>
     </section>
+    <section class="pantalla intro" id="p-intro" hidden>${htmlIntro()}</section>
     <div class="hoja-fondo" id="hoja" hidden></div>
     <div class="version">${t.version(__VERSION__)}<span class="fuera-de-juego"> · <button class="enlace-priv" id="abrir-privacidad">${t.privacidad}</button></span></div>
   `;
   const $ = (id: string) => document.getElementById(id)!;
-  const pJugadores = $('p-jugadores'), pJuego = $('p-juego'), capa = $('j-capa');
+  const pJugadores = $('p-jugadores'), pJuego = $('p-juego'), pIntro = $('p-intro'), capa = $('j-capa');
   const zona = $('j-zona');
   // 3D por defecto; ?2d vuelve al vaso plano de la fase 1 (útil para afinar el tacto). Sin
   // WebGL 2, Three.js no arranca: se juega con el vaso plano, que es jugable entero.
@@ -174,11 +180,35 @@ export function startApp(root: HTMLElement) {
       <span class="selector-flecha" aria-hidden="true">▾</span>
     </button>`;
   }
+  // ── Intro: solo al cargar la página; Revancha y «Cambiar jugadores» van directos a Jugadores ──
+  let demo: Demo | null = null;
+  function mostrarIntro() {
+    demo = new Demo();
+    document.body.classList.add('en-intro');
+    pJugadores.hidden = true;
+    pJuego.hidden = false;
+    pIntro.hidden = false;
+    ($('intro-jugar') as HTMLButtonElement).focus({ preventScroll: true });
+  }
+  function salirDeLaIntro() {
+    if (!demo) return;
+    demo = null;
+    document.body.classList.remove('en-intro');
+    pIntro.hidden = true;
+  }
+  pIntro.addEventListener('click', e => {
+    const el = (e.target as HTMLElement).closest('button');
+    if (el?.id === 'intro-jugar') showPlayers();
+    else if (el?.id === 'intro-ajustes') abrirAjustes();
+  });
+
   function showPlayers() {
     game = null;
+    void soltarPantalla();
     sonido.callar();
     vibracion.parar();
     document.body.classList.remove('en-juego');
+    salirDeLaIntro();
     pJuego.hidden = true;
     pJugadores.hidden = false;
     const scroll = pJugadores.querySelector('.desplazable')?.scrollTop ?? 0;
@@ -307,8 +337,10 @@ export function startApp(root: HTMLElement) {
             ${fila('sonido', t.ajusteSonido, t.ajusteSonidoTexto)}
             ${fila('vibracion', t.ajusteVibracion, t.ajusteVibracionTexto, !vibra)}
             ${fila('cercania', t.ajusteCercania, t.ajusteCercaniaTexto, !vibra || !ajustes.vibracion)}
+            ${fila('pantalla', t.ajustePantalla, t.ajustePantallaTexto, !puedeMantener())}
           </ul>
           ${vibra ? '' : `<p class="hoja-pie">${t.sinVibracion}</p>`}
+          ${puedeMantener() ? '' : `<p class="hoja-pie">${t.sinPantalla}</p>`}
         </div>
       </section>`;
     hoja.hidden = false;
@@ -414,6 +446,7 @@ export function startApp(root: HTMLElement) {
     };
     game = new Game(finalNames, options);
     partidas++;
+    if (ajustes.pantalla) void pedirPantalla();
     document.body.classList.add('en-juego');
     zonaUsada = null;
     shownPhase = null;
@@ -440,7 +473,7 @@ export function startApp(root: HTMLElement) {
   // al volver el chorro seguía abierto y el turno no acababa (UB-05).
   const soltarSiPulsa = () => { if (game?.pressing) release(); };
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) return;
+    if (!document.hidden) { if (game && ajustes.pantalla) void volverAPedir(); return; }
     soltarSiPulsa();
     sonido.callar();
     vibracion.parar();
@@ -626,6 +659,10 @@ export function startApp(root: HTMLElement) {
           vista.draw(repeticion(t), repeDesde + t * REPETICION.velocidad);
         } else vista.draw(game, now);
         debug.update(game);
+      } else if (demo) {
+        // La intro: la escena de demostración, sin sonido ni vibración.
+        while (acc >= DT) { demo.step(DT); acc -= DT; }
+        vista.draw(demo.game, nowMs / 1000);
       } else {
         acc = 0;
       }
@@ -640,5 +677,5 @@ export function startApp(root: HTMLElement) {
   }
   requestAnimationFrame(frame);
 
-  showPlayers();
+  mostrarIntro();
 }

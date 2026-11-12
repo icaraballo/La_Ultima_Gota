@@ -7,26 +7,23 @@ const infoVasos = {
   cilindro: { texto: 'Sube siempre al mismo ritmo, del fondo al borde. Lo que ves es lo que hay.', nota: 'El vaso para aprender.' },
   copa: { texto: 'Estrecha abajo y ancha arriba. Al principio sube muy rápido; arriba parece que no sube nada.', nota: 'Cuidado: arriba la gente se confía y suelta chorros largos.' },
   botella: { texto: 'Cuerpo ancho y cuello estrecho. Tarda muchísimo en subir, pero en el cuello cada gota se nota y casi no aguanta abombado.', nota: 'Cuidado: el cuello.' },
-  // v0.8.0: propuestos el 23-10-2026, pendientes de revisar jugando.
   pecera: { texto: 'Panza ancha y boca estrecha. A medio llenar parece que falta muchísimo; en la boca, cada toque sube un montón.', nota: 'Cuidado: la boca.' },
-  tarta: { texto: 'Tres pisos, cada uno más estrecho que el de abajo. Al pasar de piso, lo mismo sube el doble de rápido, y el último se llena en nada.', nota: 'Cuidado: el salto de piso.' },
-  chupito: { texto: 'Pequeño y bajo: se llena en una o dos vueltas.', nota: 'Para una rápida.' },
+  tarta: { texto: 'Tres pisos, cada uno más estrecho que el de abajo. Cada vez que cambias de piso, lo mismo sube mucho más deprisa, y el último se llena en nada.', nota: 'Cuidado: el salto de piso.' },
+  chupito: { texto: 'Pequeño y bajo: se llena en una vuelta, a veces ni eso.', nota: 'Para una rápida.' },
   // Esmerilado: aprobado por Iñigo el 26-10-2026 (escarcha y manchas, v0.16.0).
   esmerilado: { texto: 'Cristal esmerilado, con manchas que cambian cada ronda. El nivel se intuye, pero no se lee hasta que llega arriba.', nota: 'Fíate del oído.' },
-  // v0.10.0: propuesto el 23-10-2026, pendiente de revisar jugando.
-  fuga: { texto: 'Tiene un agujero a media altura. Mientras os pasáis el móvil se va escapando un poco, hasta el agujero. Las canicas pequeñas y alguna moneda también se cuelan.', nota: 'Tardar en pasarlo ayuda al siguiente.' },
+  fuga: { texto: 'Tiene un agujero a media altura. Mientras os pasáis el móvil el líquido se va escapando, pero solo un poco cada vez y nunca por debajo del agujero. Las canicas pequeñas y alguna moneda también se cuelan.', nota: 'Cuidado: no te fíes de que baje.' },
 };
 const infoLiquidos = {
   agua: { texto: 'La de referencia. Corta casi en seco al soltar y se abomba un poco sobre el borde antes de rebosar.', nota: '' },
   aceite: { texto: 'Sale más despacio, pero es espeso y al soltar sigue cayendo un buen rato. Casi no se abomba: desborda en cuanto pasa del borde.', nota: 'Cuidado: suelta antes de lo que crees.' },
-  // v0.9.0: propuesto el 23-10-2026, pendiente de revisar jugando.
-  leche: { texto: 'Sube sola durante tu turno, desde «¡Listo!» hasta que sueltas, y cada turno un poco más rápido porque se va calentando.', nota: 'Cuidado: dudar también llena.' },
+  leche: { texto: 'Sube sola durante tu turno, desde «¡Listo!» hasta que sueltas, y cada turno de la ronda un poco más deprisa porque se va calentando.', nota: 'Cuidado: dudar también llena.' },
   cerveza: { texto: 'A chorro hace mucha espuma, y la espuma también desborda. Se asienta en unos segundos, y el siguiente la ve bajar. Las gotas casi no hacen espuma.', nota: 'Cuidado: un chorro fuerte, aunque quede hueco.' },
 };
-// Canicas y monedas (v0.7.0): textos propuestos, pendientes de que Iñigo los apruebe.
+// Canicas y monedas (v0.7.0): textos aprobados por Iñigo el 10-11-2026.
 const infoSolidos = {
-  canicas: { texto: 'El vaso empieza vacío y se echan canicas: un toque, una; mantener, un puñado. Son de tamaños distintos, así que unas veces caben más y otras menos. Ruedan: arriba se escapan.', nota: 'Pierde quien hace caer una fuera del vaso.' },
-  monedas: { texto: 'Las ocho monedas de euro, a su tamaño. Se quedan cruzadas, dejan huecos y el montón se vuelve inestable, como una torre de bloques.', nota: 'Cuidado: un puñado puede tirar las de arriba.' },
+  canicas: { texto: 'Se echan canicas: un toque, una; mantener, un puñado. Son de tamaños distintos, así que a veces caben más y a veces menos, y las de arriba pueden rodar y caerse.', nota: 'Pierde quien tira una fuera del vaso.' },
+  monedas: { texto: 'Las ocho monedas de euro, bien gordas. Se quedan cruzadas, dejan huecos y el montón se vuelve inestable, como una torre de bloques.', nota: 'Cuidado: un puñado puede tirar las de arriba.' },
 };
 
 export const es = {
@@ -42,6 +39,7 @@ export const es = {
   anadirJugador: '+ Añadir jugador',
   quitarJugador: 'Quitar',
   empezar: 'Empezar',
+  jugar: 'Jugar',
   vaso: 'Vaso',
   liquido: 'Qué se echa',
   vasoYContenido: 'Vaso y qué se echa',
@@ -69,13 +67,23 @@ export const es = {
   eliminadoPieza: (nombre: string, pieza: 'canicas' | 'monedas') =>
     `${nombre} ha echado la última ${pieza === 'canicas' ? 'canica' : 'moneda'}`,
   quedan: (n: number) => `Quedan ${n}`,
-  /** Frases con humor al eliminar (§7.1): salen al azar, sin repetir la anterior. Iñigo las
-   * aprueba antes de entrar (23-10-2026: de momento, una). */
-  frasesEliminado: ['La gota que colmó el vaso'],
+  /** Frases con humor al eliminar (§7.1): salen al azar, sin repetir la anterior. Aprobadas por
+   * Iñigo el 10-11-2026. Sin dígitos y sin comillas (app.ts las pone con «»). */
+  frasesEliminado: [
+    'La gota que colmó el vaso',
+    'Te ha temblado el pulso',
+    'Eso ya no cabía',
+    'Se veía venir',
+    'El vaso avisó',
+    'Hasta aquí llegó el vaso',
+    'Con un poquito menos, ni se nota',
+    'Había otra forma de hacerlo',
+    'La última siempre duele',
+  ],
   camaraLenta: 'Cámara lenta',
   verOtraVez: 'Verlo otra vez',
   siguienteRonda: 'Siguiente ronda',
-  combinacionAleatoria: 'Vaso y líquido aleatorios',
+  combinacionAleatoria: 'Otra combinación al azar',
   verGanador: 'Ver ganador',
   gana: (nombre: string) => `¡Gana ${nombre}!`,
   revancha: 'Revancha',
@@ -99,6 +107,9 @@ export const es = {
   ajusteCercania: 'Aviso de borde',
   ajusteCercaniaTexto: 'Vibra más a menudo cuanto más lleno se ve el vaso',
   sinVibracion: 'Este móvil no deja vibrar a las páginas web (pasa en los iPhone).',
+  ajustePantalla: 'Pantalla encendida',
+  ajustePantallaTexto: 'No se apaga durante la partida',
+  sinPantalla: 'Este navegador no deja mantener la pantalla encendida.',
   info: 'Vasos y líquidos',
   cerrar: 'Cerrar',
   vasosTitulo: 'Vasos',

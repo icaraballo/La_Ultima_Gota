@@ -260,7 +260,8 @@ export class Game {
       // Leche al fuego: sube sola mientras el jugador duda o echa, cada turno un poco más rápido.
       const { rise, riseGrow } = this.glass.liquid;
       if (rise > 0 && this.phase === 'echando' && !this.poured) {
-        this.glass.add(rise * (1 + riseGrow * this.turnsThisRound) * dt);
+        const escala = cfg.milkRiseScaleByVessel[this.glass.vessel.id] ?? 1;
+        this.glass.add(rise * escala * (1 + riseGrow * this.turnsThisRound) * dt);
       }
       if (this.phase === 'echando') this.pouredThisTurn += arrived;
     }

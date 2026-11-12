@@ -94,6 +94,10 @@ const PARAMS: { grupo: string; params: Param[] }[] = [
       get: () => config.coinScaleByVessel.botella, set: v => { config.coinScaleByVessel.botella = v; } },
     solido('interval', 'Una pieza cada (s) al mantener', 0.08, 0.6, 0.01),
   ] },
+  { grupo: 'Leche en la botella', params: [
+    { label: 'Leche en la botella (×)', min: 0.2, max: 1.5, step: 0.05,
+      get: () => config.milkRiseScaleByVessel.botella, set: v => { config.milkRiseScaleByVessel.botella = v; } },
+  ] },
   { grupo: 'Vaso con fuga', params: [
     fuga('height', 'Altura del agujero', 0.1, 0.9, 0.01),
     fuga('rate', 'Se escapa (vol/s)', 0, 0.3, 0.005),

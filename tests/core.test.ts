@@ -550,6 +550,19 @@ describe('leche al fuego (v0.9.0)', () => {
     expect(tercera).toBeCloseTo(primera * (1 + 2 * config.liquids.leche.riseGrow), 3);
   });
 
+  it('en la botella sube más despacio (milkRiseScaleByVessel); en los demás vasos, igual', () => {
+    const sube = (vessel: 'cilindro' | 'botella' | 'copa') => {
+      const g = new Game(['A', 'B'], { seed: 1, vessel, content: 'leche' });
+      g.ready();
+      espera(g, 2);
+      return g.glass.volume * g.glass.vessel.capacity; // en vasos rectos
+    };
+    expect(config.milkRiseScaleByVessel.botella).toBeLessThan(1);
+    expect(sube('botella')).toBeCloseTo(sube('cilindro') * config.milkRiseScaleByVessel.botella, 4);
+    expect(sube('copa')).toBeCloseTo(sube('cilindro'), 6);
+    expect(sube('cilindro')).toBeCloseTo(2 * config.liquids.leche.rise, 3);
+  });
+
   it('quien se queda dudando la deja salir y pierde', () => {
     const g = new Game(['A', 'B'], { seed: 1, content: 'leche' });
     g.ready();

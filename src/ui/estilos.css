@@ -371,3 +371,23 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
 .debug-nota { font-size: 11px; color: rgba(244, 239, 230, .55); white-space: pre-wrap; word-break: break-all; }
 .debug-botones { display: flex; gap: 8px; }
 .debug-botones button { flex: 1; padding: 10px; border: 0; border-radius: 10px; font: inherit; background: #26374a; color: #f4efe6; }
+
+/* ── Intro (v0.17.0): la escena del juego a pantalla completa y, encima, título y botones ── */
+.en-intro #p-juego .cabecera, .en-intro #p-juego .controles { display: none; }
+.en-intro #p-juego { padding: 0; }
+#p-intro {
+  z-index: 4; background: transparent; pointer-events: none; overflow: hidden;
+  padding: max(40px, calc(var(--sa-arriba) + 16px)) 16px max(40px, calc(var(--sa-abajo) + 28px));
+  align-items: center; justify-content: space-between; text-align: center;
+}
+#p-intro > * { pointer-events: auto; }
+.intro-titulo { display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
+.intro-titulo .logo { font-size: 48px; line-height: 1.05; }
+.intro-titulo .lema { font-size: 17px; max-width: 300px; }
+.intro-botones { width: 100%; max-width: 310px; display: flex; flex-direction: column; gap: 14px; }
+.intro-botones .boton { width: 100%; }
+.intro-botones .boton.principal { min-height: 64px; border-radius: 32px; margin-bottom: 5px; }
+.intro-botones .boton.con-icono { min-height: 48px; border-radius: 24px; }
+/* Arriba más pegado que los 64 px de la maqueta: la cámara del juego pone la llave del grifo a
+   ~145 px de arriba y a 64 el lema chocaba con ella. La versión, clara sobre la mesa. */
+.en-intro .version { color: #fff; opacity: .9; text-shadow: 0 1px 3px rgba(0, 0, 0, .6); }

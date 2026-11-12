@@ -79,6 +79,13 @@ export const config = {
   coinScaleByVessel: { botella: 2.0 } as Record<string, number>,
 
   /**
+   * Multiplicador de `rise` de la leche en los vasos que no suben al ritmo de serie (v0.17.0,
+   * simulador del 12-11-2026, ver la nota de la versión). Solo la botella: el cuello deja muy poco
+   * margen y la leche, que sube sola, la desbordaba el asiento 1 más de lo justo.
+   */
+  milkRiseScaleByVessel: { botella: 0.6 } as Record<string, number>,
+
+  /**
    * Vaso con fuga (v0.10.0): agujero a `height` (1 = borde). Mientras se pasa el móvil (pantalla
    * «Turno de X») se escapa `rate` por segundo (volumen de vaso recto), como mucho `maxPerTurn`
    * por pase y nunca por debajo del agujero. Con piezas, `sizePx` es el hueco en la pared (px del
@@ -107,6 +114,13 @@ export const config = {
     spots: 3, dangerZone: [0.62, 0.9], zone: [0.08, 0.92], spotX: 0.55,
     spotH: [0.08, 0.17], spotS: [0.4, 0.72], spotScale: 1, spotOpacity: 0.9,
   },
+
+  /**
+   * Pantalla de arranque (v0.17.0, decisión de Iñigo del 10-11-2026): un vaso recto con agua que
+   * no sube, con una gota que cae cada tanto. level: altura relativa del agua (1 = borde; a tres
+   * cuartos, sin cúpula). dropEvery (s): segundos entre gota y gota.
+   */
+  intro: { level: 0.75, dropEvery: 2.4 },
 
   liquids: {
     agua: { flowMul: 1, inertia: 0.15, meniscus: 0.025, foamPerFlow: 0, foamDecay: 0.5, rise: 0, riseGrow: 0 },

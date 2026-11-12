@@ -115,3 +115,50 @@ describe('Privacidad (v0.7.3)', () => {
     expect(CSP).toContain("connect-src 'self' https://docs.google.com;");
   });
 });
+
+describe('Intro (v0.17.0)', () => {
+  it('lleva «Jugar» y «Ajustes» y ningún dígito', async () => {
+    const { htmlIntro } = await import('../src/ui/intro');
+    const html = htmlIntro();
+    expect(html).toContain('id="intro-jugar"');
+    expect(html).toContain('id="intro-ajustes"');
+    expect(html).toContain(t.jugar);
+    expect(html.replace(/<[^>]*>/g, '')).not.toMatch(/\d/); // sin números en pantalla
+  });
+
+  it('la partida de demostración deja el agua fija, suelta gotas y nunca desborda', async () => {
+    const { Demo } = await import('../src/ui/intro');
+    const { config } = await import('../src/core/config');
+    const d = new Demo();
+    const dt = 1 / config.stepsPerSecond;
+    let gotas = 0, vistas = 0;
+    for (let i = 0; i < 60 * 30; i++) {
+      d.step(dt);
+      const hay = d.game.faucet.inAir.length > 0;
+      if (hay && !vistas) gotas++;
+      vistas = hay ? 1 : 0;
+      expect(d.game.glass.overflowed).toBe(false);
+      expect(d.game.glass.height).toBeCloseTo(config.intro.level, 6);
+    }
+    expect(gotas).toBeGreaterThanOrEqual(8); // ~una cada 2,4 s en 30 s
+    expect(d.game.phase === 'echando' || d.game.phase === 'turno').toBe(true);
+  });
+});
+
+describe('Frases al eliminar y textos (v0.17.0)', () => {
+  it('hay nueve frases, sin vacías, repetidas ni dígitos', () => {
+    const fs = t.frasesEliminado;
+    expect(fs).toHaveLength(9);
+    expect(new Set(fs).size).toBe(9);
+    for (const f of fs) { expect(f.trim()).not.toBe(''); expect(f).not.toMatch(/\d/); }
+  });
+  it('el botón de la tarjeta del eliminado y ningún «pendiente de revisar»', () => {
+    expect(t.combinacionAleatoria).toBe('Otra combinación al azar');
+    const src = readFileSync('src/i18n/es.ts', 'utf8');
+    expect(src).not.toMatch(/pendiente/i);
+  });
+  it('los textos ⓘ no llevan números', () => {
+    const todos = [...Object.values(t.infoVasos), ...Object.values(t.infoLiquidos), ...Object.values(t.infoSolidos)];
+    for (const i of todos) expect(`${i.texto} ${i.nota}`).not.toMatch(/\d/);
+  });
+});

@@ -57,6 +57,12 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
 }
 .pie { flex: none; padding: 8px 16px max(18px, var(--sa-abajo)); }
 .pie .boton { width: 100%; }
+/* Empezar va tras las opciones; si no caben, se queda pegado abajo mientras se baja (v0.17.2). */
+.pie-fila {
+  position: sticky; bottom: -1px; z-index: 2; margin: 4px -16px 0; padding: 8px 16px 6px;
+  background: var(--fondo);
+}
+.pie-fila .boton { width: 100%; }
 .esquinas {
   position: absolute; left: 12px; right: 12px; top: max(12px, var(--sa-arriba));
   display: flex; justify-content: space-between; pointer-events: none;
@@ -303,7 +309,6 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
   font: inherit; color: inherit; text-decoration: underline; text-underline-offset: 2px;
 }
 .enlace-priv::after { content: ''; position: absolute; inset: -12px -8px; }
-.en-juego .fuera-de-juego { display: none; }
 
 /* ── Opinar y Privacidad (v0.7.3): las hojas, como la ⓘ; la de privacidad, por encima ── */
 .opinar {
@@ -311,7 +316,12 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
   min-height: 44px; padding: 6px 14px; border: 0; background: none;
   font-size: 16px; font-weight: 600; color: var(--acento);
 }
-.opinar-fila { display: flex; justify-content: center; margin-top: 6px; }
+.opinar-fila { display: flex; justify-content: center; margin-top: 2px; padding-bottom: 22px; }
+.sobre { display: flex; flex-direction: column; gap: 8px; color: var(--suave); font-size: 15px; line-height: 1.4; }
+.sobre-version { font-size: 13px; }
+.sobre-botones { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.sobre-botones .boton { flex: none; min-height: 44px; padding: 6px 16px; font-size: 16px; }
+.sobre-enlaces a { color: var(--acento); }
 .hoja-fondo.encima { z-index: 6; }
 .hoja-opinion { height: 88%; }
 .con-teclado .hoja-opinion { height: 100%; max-height: 100%; }

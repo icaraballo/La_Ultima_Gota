@@ -57,7 +57,7 @@ La Última Gota **no tiene servidor, ni cuentas, ni analítica, ni cookies**.
   Es lo único que el juego envía fuera.
 - GitHub, que aloja la página, y Google, si opinas, **ven tu dirección IP**, como cualquier web.
 
-Lo mismo se lee dentro del juego: «Privacidad», junto a la versión, y en la hoja de «Opinar», y en
+Lo mismo se lee dentro del juego: «Privacidad», en Ajustes (dentro de «Sobre este juego») y en la hoja de «Opinar», y en
 una página propia para la web y la app de Android:
 https://icaraballo.github.io/La_Ultima_Gota/privacidad.html
 

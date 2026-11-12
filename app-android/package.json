@@ -1,6 +1,6 @@
 {
   "name": "la-ultima-gota-android",
-  "version": "0.17.1",
+  "version": "0.17.2",
   "private": true,
   "license": "UNLICENSED",
   "description": "La Última Gota como app de Android (Capacitor). La web de la carpeta de arriba es el original: aquí sólo se copia y se empaqueta.",

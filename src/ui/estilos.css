@@ -63,6 +63,12 @@ button { font-family: inherit; color: inherit; cursor: pointer; }
   background: var(--fondo);
 }
 .pie-fila .boton { width: 100%; }
+/* Tablet (v0.17.4): la configuración no se estira a todo el ancho; se queda en una columna centrada.
+   Las esquinas (ⓘ, ajustes y tema) siguen en los bordes de la pantalla. */
+@media (min-width: 700px) {
+  .desplazable > :not(.esquinas) { width: 100%; max-width: 560px; margin-left: auto; margin-right: auto; }
+  .desplazable > .pie-fila { max-width: 592px; } /* 560 + el relleno de 16 px por lado */
+}
 .esquinas {
   position: absolute; left: 12px; right: 12px; top: max(12px, var(--sa-arriba));
   display: flex; justify-content: space-between; pointer-events: none;

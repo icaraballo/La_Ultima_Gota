@@ -66,6 +66,11 @@ export class Grabadora {
       out: pile?.out ? pile.pieces.indexOf(pile.out) : -1,
       pressing: g.pressing, leaking: g.leaking,
     });
+    if (this.desborde === null && !g.overflowed) {
+      // Sin desborde solo hace falta lo de justo antes: tope para quien se queda sin echar.
+      const maximo = Math.round(REPETICION.antes / this.dt) + 1;
+      if (this.fotos.length > maximo) this.fotos.splice(0, this.fotos.length - maximo);
+    }
     if (this.desborde === null && g.overflowed) {
       this.desborde = this.fotos.length - 1;
       // Solo hace falta lo de justo antes.

@@ -687,6 +687,7 @@ export function startApp(root: HTMLElement) {
     try {
       acc += Math.min(0.25, (nowMs - last) / 1000);
       last = nowMs;
+      acc = Math.min(acc, 5 * DT); // en un móvil lento, descartar tiempo en vez de acumular pasos
       if (game) {
         // Con «¿Dejar la partida?» a la vista el juego espera (el tiempo por turno y la leche no corren).
         if (!salir.hidden) acc = 0;

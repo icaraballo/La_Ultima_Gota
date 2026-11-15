@@ -279,13 +279,16 @@ export class Game {
     const quiet = pile
       ? pile.settled || this.time - this.releasedAt! >= cfg.solids.maxSettle
       : this.faucet.quiet;
-    if (this.phase === 'echando' && this.poured && quiet) {
-      this.quietSince ??= this.time;
-      if (this.time - this.quietSince >= cfg.turnEndDelay) {
-        this.record(false);
-        this.turn = (this.turn + 1) % this.order.length;
-        this.turnsThisRound++;
-        this.phase = 'turno';
+    if (this.phase === 'echando' && this.poured) {
+      if (!quiet) this.quietSince = null; // si vuelve a moverse, la pausa empieza de cero
+      else {
+        this.quietSince ??= this.time;
+        if (this.time - this.quietSince >= cfg.turnEndDelay) {
+          this.record(false);
+          this.turn = (this.turn + 1) % this.order.length;
+          this.turnsThisRound++;
+          this.phase = 'turno';
+        }
       }
     }
   }

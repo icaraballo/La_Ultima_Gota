@@ -140,7 +140,7 @@ export class Sonido {
   }
 
   private canicaSuelo() {
-    if (!this.ctx) return;
+    if (!this.ctx || !this.activo) return;
     this.tono(1800 + Math.random() * 900, 'triangle', 0.15, 0.06);
   }
 

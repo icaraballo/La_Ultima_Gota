@@ -158,8 +158,8 @@ export const es = {
   dejarPartidaTexto: 'Se pierde la partida en curso.',
   privacidadTexto: [
     'La Última Gota <b>no tiene servidor, ni cuentas, ni analítica, ni cookies</b>.',
-    'Guarda en este navegador los nombres y las opciones de la última partida, el tema elegido y los ajustes. <b>Nada de eso sale de tu móvil</b>; si borras los datos del sitio, se borran.',
-    'Si mandas una opinión, va a un <b>formulario de Google</b> con la versión del juego y la partida (vaso, qué se echa y cuántos jugáis). Tu nombre y tu contacto, solo si los escribes.',
+    'Guarda en tu dispositivo (en el navegador o dentro de la app) los nombres y las opciones de la última partida, el tema elegido y los ajustes. <b>Nada de eso sale de tu móvil</b>; si borras los datos del sitio o desinstalas la app, se borran.',
+    'Si mandas una opinión, va a un <b>formulario de Google</b> (Google LLC) con la versión del juego y la partida (vaso, qué se echa y cuántos jugáis). Tu nombre y tu contacto, solo si los escribes. Se guarda mientras sirva para mejorar el juego o hasta que pidas borrarla.',
     'GitHub, que aloja la página, y Google, si opinas, <b>ven tu dirección IP</b>, como cualquier web.',
   ],
 };

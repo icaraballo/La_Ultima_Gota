@@ -9,7 +9,7 @@ interface Vista {
 // Modo depuración (§9.2): lecturas en directo y sliders sobre config.ts para ajustar el tacto
 // sin recompilar. Panel lateral plegable, nunca a pantalla completa. Los valores se guardan en
 // este navegador y «Copiar valores» los da en JSON para pasarlos a config.ts.
-// Solo dura la visita (?debug o mantener el título 1 s) y los sliders solo cuentan con el panel
+// Solo dura la visita (solo con ?debug) y los sliders solo cuentan con el panel
 // encendido: apagado, el juego es exactamente el de config.ts.
 // Textos solo en castellano a propósito: es una herramienta, no parte del juego.
 

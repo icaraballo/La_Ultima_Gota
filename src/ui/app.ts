@@ -266,6 +266,7 @@ export function startApp(root: HTMLElement) {
     const el = e.target as HTMLInputElement;
     if (el.dataset.i) names[+el.dataset.i] = el.value;
     if (el.id === 'orden-aleatorio') prep.randomOrder = el.checked;
+    if (el.dataset.i || el.id === 'orden-aleatorio') savePrep(prep);
     if (el.id === 'con-tiempo') {
       prep.turnTime = el.checked ? TIEMPOS[0] : 0;
       showPlayers();
@@ -437,7 +438,11 @@ export function startApp(root: HTMLElement) {
     if (history.state?.hoja) history.back();
     else hoja.hidden = true;
   }
-  window.addEventListener('popstate', () => { hoja.hidden = history.state?.hoja !== true; });
+  window.addEventListener('popstate', () => {
+    if (history.state?.hoja !== true) hoja.hidden = true;
+    // «Adelante» a una entrada de hoja con la hoja cerrada: se neutraliza, o el siguiente «atrás» no haría nada.
+    else if (hoja.hidden) { try { history.replaceState(null, ''); } catch { /* sin historial */ } }
+  });
   hoja.addEventListener('click', e => {
     const el = e.target as HTMLElement;
     const opcion = el.closest<HTMLElement>('[data-elegir]');
@@ -540,14 +545,7 @@ export function startApp(root: HTMLElement) {
   window.addEventListener('pagehide', soltarSiPulsa);
   window.addEventListener('blur', soltarSiPulsa);
 
-  // Modo depuración: ?debug en la URL o mantener pulsado el título 1 s.
-  let logoTimer = 0;
-  pJugadores.addEventListener('pointerdown', e => {
-    if ((e.target as HTMLElement).id === 'logo') logoTimer = window.setTimeout(() => debug.toggle(), 1000);
-  });
-  for (const ev of ['pointerup', 'pointercancel', 'pointerleave'] as const) {
-    pJugadores.addEventListener(ev, () => clearTimeout(logoTimer));
-  }
+  // Modo depuración: solo con ?debug en la URL (sin gesto oculto: no se activa sin querer ni a escondidas).
 
   // Si la capa aparece con el dedo aún en la zona (desborde), al soltar no debe pulsar nada:
   // solo vale un toque que empiece con la capa ya a la vista (o el teclado, detail = 0).

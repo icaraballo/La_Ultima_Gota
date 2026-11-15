@@ -619,6 +619,23 @@ describe('vaso con fuga (v0.10.0)', () => {
   });
 });
 
+describe('fuga: el desborde de sólidos no se confunde con el agujero (auditoría v0.16.0)', () => {
+  const dt = 1 / 60;
+  it.each(['canicas', 'monedas'] as const)('%s: quien sale fuera lo hace por el borde, no por el agujero', kind => {
+    for (let seed = 1; seed <= 8; seed++) {
+      const pile = new Pile(kind, getVessel('fuga'), createRng(seed), config);
+      const band = (pile as unknown as { holeBand: [number, number] }).holeBand;
+      for (let i = 0; i < 60 * 60 && !pile.out; i++) {
+        if (i % 6 === 0) pile.drop();
+        pile.step(dt);
+      }
+      expect(pile.out).not.toBeNull();
+      const p = pile.out!;
+      expect(p.y > band[1] + 3 * p.h || p.y < band[0] - 3 * p.h || p.x <= 0).toBe(true);
+    }
+  });
+});
+
 describe('esmerilado (v0.16.0)', () => {
   const f = config.frosted;
   const esmerilado = (seed: number, cfg = config) => new Glass(getVessel('esmerilado'), agua, createRng(seed), cfg);

@@ -39,9 +39,12 @@ export function computeStats(history: readonly TurnRecord[]): Stats {
 
   const aportes = new Map<number, number[]>();
   for (const turnos of porRonda.values()) {
-    const m = media(turnos.map(h => h.poured));
+    // El turno del desborde no cuenta: quien pierde a lo grande no es «el más generoso».
+    const validos = turnos.filter(h => !h.overflowed);
+    if (!validos.length) continue;
+    const m = media(validos.map(h => h.poured));
     if (m <= 0) continue;
-    for (const h of turnos) aportes.set(h.player, [...(aportes.get(h.player) ?? []), h.poured / m]);
+    for (const h of validos) aportes.set(h.player, [...(aportes.get(h.player) ?? []), h.poured / m]);
   }
   const aporte = new Map([...aportes].map(([p, xs]) => [p, media(xs)]));
 

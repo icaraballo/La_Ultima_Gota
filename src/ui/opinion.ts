@@ -13,6 +13,16 @@ export const OPINION_ENTRIES = ['entry.932365581', 'entry.1764929900', 'entry.33
 /** Los tres que rellena el juego y no se ven (la sección final del formulario). */
 export const OPINION_CAMPOS = { version: 'entry.1031068515', modo: 'entry.1550420656', momento: 'entry.1150654629' };
 const MAX = { largo: 2000, corto: 100 };
+const K_ULTIMO = 'ultima-gota:opinion-ts';
+const ESPERA_S = 60;
+/** Segundos que faltan para poder enviar otra opinión (0 = ya se puede). */
+function esperaRestante(): number {
+  try {
+    const antes = Number(localStorage.getItem(K_ULTIMO));
+    if (!Number.isFinite(antes) || antes <= 0) return 0;
+    return Math.max(0, Math.ceil(ESPERA_S - (Date.now() - antes) / 1000));
+  } catch { return 0; }
+}
 
 export interface DatosOpinion { version: string; modo?: string; momento?: string }
 
@@ -98,6 +108,11 @@ export function createOpinion(root: HTMLElement) {
   };
   window.addEventListener('popstate', () => {
     const marca = history.state?.hoja;
+    if ((marca === 'opinion' && opinion.hidden) || (marca === 'privacidad' && privacidad.hidden)) {
+      // «Adelante» a una hoja ya cerrada: se neutraliza la entrada para que «atrás» no se quede en blanco.
+      try { history.replaceState(null, ''); } catch { /* sin historial */ }
+      return;
+    }
     if (marca !== 'privacidad') privacidad.hidden = true;
     if (marca !== 'opinion' && marca !== 'privacidad') { opinion.hidden = true; datos = null; ajustar(); }
   });
@@ -143,6 +158,8 @@ export function createOpinion(root: HTMLElement) {
     for (const entry of OPINION_ENTRIES) respuestas[entry] = (form.elements.namedItem(entry) as HTMLInputElement).value;
     const cuerpo = cuerpoOpinion(respuestas, datos ?? { version: __VERSION__ });
     if (!cuerpo) { aviso.textContent = t.opinionVacia; return; }
+    const espera = esperaRestante();
+    if (espera > 0) { aviso.textContent = t.opinionEspera(espera); return; }
     aviso.textContent = '';
     enviar.disabled = true;
     enviar.textContent = t.enviando;
@@ -155,6 +172,7 @@ export function createOpinion(root: HTMLElement) {
       aviso.textContent = t.opinionSinRed;
       return;
     }
+    try { localStorage.setItem(K_ULTIMO, String(Date.now())); } catch { /* sin almacenamiento */ }
     form.reset();
     form.hidden = true;
     gracias.hidden = false;

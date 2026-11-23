@@ -356,6 +356,7 @@ h2 { font-size: 17px; font-weight: 600; color: var(--acento); margin-top: 6px; }
 .priv-texto { gap: 12px; }
 .priv-texto p { font-size: 16px; line-height: 1.45; }
 .priv-texto b { font-weight: 600; color: var(--acento); }
+.priv-texto a { color: var(--acento); }
 .priv-texto .boton.principal { margin-top: 6px; }
 
 /* ── Modo depuración (herramienta: colores propios, oscuros) ── */

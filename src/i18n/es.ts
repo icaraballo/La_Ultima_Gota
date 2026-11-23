@@ -162,6 +162,7 @@ export const es = {
     'Guarda en tu dispositivo (en el navegador o dentro de la app) los nombres y las opciones de la última partida, el tema elegido y los ajustes. <b>Nada de eso sale de tu móvil</b>; si borras los datos del sitio o desinstalas la app, se borran.',
     'Si mandas una opinión, va a un <b>formulario de Google</b> (Google LLC) con la versión del juego y la partida (vaso, qué se echa y cuántos jugáis). Tu nombre y tu contacto, solo si los escribes. Se guarda mientras sirva para mejorar el juego o hasta que pidas borrarla.',
     'GitHub, que aloja la página, y Google, si opinas, <b>ven tu dirección IP</b>, como cualquier web.',
+    '<b>Para borrar una opinión</b>, escribe a inigo.caraballo.apps@gmail.com (o desde «Opinar») con el asunto «Borrar datos de La Última Gota» y la fecha aproximada. Se borra todo lo que se envió con ella, también de cualquier copia, en un máximo de 30 días. Más detalle: <a href="https://icaraballo.github.io/La_Ultima_Gota/privacidad.html#borrar-datos" target="_blank" rel="noopener">Borrar tus datos</a>.',
   ],
 };
 

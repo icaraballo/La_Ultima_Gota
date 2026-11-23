@@ -107,7 +107,8 @@ describe('Privacidad (v0.7.3)', () => {
   const readme = llano(readFileSync(new URL('../README.md', import.meta.url), 'utf8'));
   const enJuego = llano(t.privacidadTexto.join(' '));
   it.each(['no tiene servidor, ni cuentas, ni analítica, ni cookies', 'Nada de eso sale de tu móvil',
-    'va a un formulario de Google', 'ven tu dirección IP'])('«%s», en el juego y en el README', frase => {
+    'va a un formulario de Google', 'ven tu dirección IP', 'Para borrar una opinión', 'inigo.caraballo.apps@gmail.com',
+    'Se borra todo lo que se envió con ella, también de cualquier copia, en un máximo de 30 días'])('«%s», en el juego y en el README', frase => {
     expect(enJuego).toContain(frase);
     expect(readme).toContain(frase);
   });

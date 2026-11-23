@@ -57,6 +57,7 @@ La Última Gota **no tiene servidor, ni cuentas, ni analítica, ni cookies**.
   Lo recibe Google LLC y se guarda mientras sirva para mejorar el juego o hasta que se pida borrarlo.
   Es lo único que el juego envía fuera.
 - GitHub, que aloja la página, y Google, si opinas, **ven tu dirección IP**, como cualquier web.
+- **Para borrar una opinión**, escribe a inigo.caraballo.apps@gmail.com (o desde «Opinar») con el asunto «Borrar datos de La Última Gota» y la fecha aproximada. Se borra todo lo que se envió con ella, también de cualquier copia, en un máximo de 30 días. Más detalle en [Borrar tus datos](https://icaraballo.github.io/La_Ultima_Gota/privacidad.html#borrar-datos).
 
 Lo mismo se lee dentro del juego: «Privacidad», en Ajustes (dentro de «Sobre este juego») y en la hoja de «Opinar», y en
 una página propia para la web y la app de Android:

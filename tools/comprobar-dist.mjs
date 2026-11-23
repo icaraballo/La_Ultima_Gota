@@ -59,7 +59,7 @@ if (existsSync(priv)) {
   const p = texto(priv);
   if (!/<meta http-equiv="Content-Security-Policy"/.test(p)) falla('privacidad.html no lleva la CSP');
   if (/(src|href)="https?:\/\//.test(p.replace(/<a href="https:\/\/github\.com\/icaraballo\/La_Ultima_Gota">/, ''))) falla('privacidad.html pide algo a otra web');
-  for (const frase of ['no tiene servidor, ni cuentas, ni analítica', 'formulario de', 'dirección IP']) {
+  for (const frase of ['no tiene servidor, ni cuentas, ni analítica', 'formulario de', 'dirección IP', 'id="borrar-datos"', 'máximo de 30 días']) {
     if (!p.replace(/<\/?b>|\s+/g, ' ').toLowerCase().includes(frase.toLowerCase())) falla(`privacidad.html no dice «${frase}»`);
   }
 }
